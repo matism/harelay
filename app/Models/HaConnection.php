@@ -55,7 +55,8 @@ class HaConnection extends Model
     public static function generateSubdomain(): string
     {
         do {
-            $subdomain = Str::lower(Str::random(8));
+            // 16 characters = 36^16 ≈ 7.9 * 10^24 combinations (virtually impossible to brute force)
+            $subdomain = Str::lower(Str::random(16));
         } while (self::where('subdomain', $subdomain)->exists());
 
         return $subdomain;
