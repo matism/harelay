@@ -55,6 +55,7 @@ php artisan optimize:clear
 - `users` - User accounts (Breeze)
 - `ha_connections` - User's HA connection (subdomain, token, status, last_connected_at)
 - `subscriptions` - User subscription plans
+- `device_codes` - Device pairing codes for add-on setup
 
 ### Directory Structure
 
@@ -66,7 +67,10 @@ app/
 │   │   ├── ConnectionController.php   # Create/delete/regenerate token
 │   │   ├── ProxyController.php        # HTTP proxying + WS script injection
 │   │   ├── MarketingController.php    # Public pages
+│   │   ├── DeviceLinkController.php   # Device code pairing (/link)
 │   │   └── ProfileController.php      # User profile (Breeze)
+│   ├── Controllers/Api/
+│   │   └── DeviceCodeController.php   # Device code API endpoints
 │   └── Middleware/
 │       ├── SubdomainProxy.php         # Subdomain detection (local dev)
 │       ├── ProxySecurityHeaders.php   # Security headers for proxied responses
@@ -74,7 +78,8 @@ app/
 ├── Models/
 │   ├── User.php
 │   ├── HaConnection.php               # Has getProxyUrl() helper
-│   └── Subscription.php
+│   ├── Subscription.php
+│   └── DeviceCode.php                 # Device pairing codes
 ├── Services/
 │   └── TunnelManager.php              # File-cache IPC with tunnel server
 └── Console/Commands/
@@ -83,13 +88,14 @@ app/
 tunnel-server.php                      # Workerman WebSocket tunnel server
 
 routes/
-├── web.php                            # Web routes + subdomain proxy
-├── api.php                            # Empty (all tunnel communication via WebSocket)
+├── web.php                            # Web routes + subdomain proxy + /link
+├── api.php                            # Device code API endpoints
 └── auth.php                           # Auth routes (Breeze)
 
 resources/views/
 ├── dashboard/                         # User dashboard views
 ├── marketing/                         # Public marketing pages
+├── device/                            # Device pairing views (link.blade.php)
 ├── errors/                            # Tunnel error pages (auth-required, disconnected, timeout)
 └── components/                        # Blade components
 ```
@@ -200,6 +206,27 @@ The Home Assistant add-on is in a separate repository at `../harelay-addon/`. It
 - Authenticates with subdomain and token
 - Proxies HTTP requests to local Home Assistant
 - Proxies WebSocket connections for real-time features
+- Supports device code pairing (leave credentials empty to start pairing mode)
+
+### Device Code Pairing Flow
+
+Users can pair the add-on without manually copying credentials:
+
+1. User installs add-on, leaves subdomain/token empty
+2. Add-on starts in pairing mode, calls `POST /api/device/code` to get a device code
+3. Add-on displays: `Visit harelay.com/link and enter code: XXXX-XXXX`
+4. User visits `/link`, logs in (or registers), enters the code
+5. Server creates/links connection and stores plain token temporarily
+6. Add-on polls `GET /api/device/poll/{deviceCode}` and receives credentials
+7. Add-on saves credentials via Supervisor API and connects
+
+**API Endpoints:**
+```
+POST /api/device/code          # Generate device code (returns device_code, user_code)
+GET  /api/device/poll/{code}   # Poll for pairing status (returns credentials when linked)
+GET  /link                     # Web UI for entering pairing code
+POST /link                     # Link device to user account (requires auth)
+```
 
 ## Environment Variables
 
@@ -240,6 +267,8 @@ TUNNEL_DEBUG=false                    # Enable verbose logging
 - WebSocket path validation: only `/api/websocket` and `/api/hassio` allowed
 - Stream IDs use cryptographically secure random bytes
 - Security headers on proxy responses (X-Robots-Tag, X-Frame-Options)
+- Device codes expire after 15 minutes
+- Plain tokens stored temporarily in device_codes, cleared after first poll
 
 ## Working Guidelines
 

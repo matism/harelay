@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\DeviceCodeController;
+use Illuminate\Support\Facades\Route;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -9,3 +12,9 @@
 | instead of HTTP API endpoints.
 |
 */
+
+// Device pairing (no auth required - add-on calls these)
+Route::prefix('device')->group(function () {
+    Route::post('/code', [DeviceCodeController::class, 'create']);
+    Route::get('/poll/{deviceCode}', [DeviceCodeController::class, 'poll']);
+});

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ConnectionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeviceLinkController;
 use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProxyController;
@@ -11,6 +12,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [MarketingController::class, 'home'])->name('marketing.home');
 Route::get('/pricing', [MarketingController::class, 'pricing'])->name('marketing.pricing');
 Route::get('/how-it-works', [MarketingController::class, 'howItWorks'])->name('marketing.how-it-works');
+
+// Device linking
+Route::get('/link', [DeviceLinkController::class, 'show'])->name('device.link');
+Route::post('/link', [DeviceLinkController::class, 'link'])->middleware(['auth', 'verified']);
 
 // Dashboard routes (authenticated)
 Route::middleware(['auth', 'verified'])->group(function () {
