@@ -33,13 +33,14 @@
                                 <h3 class="text-2xl font-bold text-white mb-2">Connected</h3>
                                 <p class="text-slate-400 mb-6">Your Home Assistant is securely connected</p>
                             @else
-                                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-500/20 mb-6">
-                                    <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"></path>
+                                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-cyan-500/20 mb-6">
+                                    <svg class="w-10 h-10 text-cyan-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                 </div>
-                                <h3 class="text-2xl font-bold text-white mb-2">Disconnected</h3>
-                                <p class="text-slate-400 mb-6">Your add-on is not currently connected</p>
+                                <h3 class="text-2xl font-bold text-white mb-2">Waiting for Connection</h3>
+                                <p class="text-slate-400 mb-6">Start your Home Assistant add-on to connect</p>
                             @endif
 
                             <!-- Connection URL -->
@@ -61,8 +62,11 @@
                                         </p>
                                     @else
                                         <p class="text-white font-medium flex items-center justify-center mt-1">
-                                            <span class="w-2 h-2 mr-2 bg-slate-400 rounded-full"></span>
-                                            Offline
+                                            <svg class="w-4 h-4 mr-2 text-cyan-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Waiting
                                         </p>
                                     @endif
                                 </div>
@@ -75,11 +79,12 @@
                             </div>
 
                             @if(!$connection->isConnected())
-                                <!-- Help for disconnected state -->
+                                <!-- Help for waiting state -->
                                 <div class="mt-8 pt-6 border-t border-white/10">
-                                    <p class="text-slate-400 text-sm mb-4">Need to reconnect?</p>
-                                    <a href="{{ route('dashboard.setup') }}" class="inline-flex items-center px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold rounded-lg transition">
-                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <p class="text-slate-400 text-sm mb-2">This page will automatically update when connected.</p>
+                                    <p class="text-slate-500 text-xs mb-4">Need help? Check the setup guide below.</p>
+                                    <a href="{{ route('dashboard.setup') }}" class="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg transition text-sm">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                                         </svg>
                                         View Setup Guide
