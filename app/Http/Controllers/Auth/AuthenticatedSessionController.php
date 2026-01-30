@@ -24,7 +24,21 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->authenticate();
+        $user = $request->authenticate();
+
+        // If 2FA is required, redirect to challenge
+        if ($user) {
+            $request->session()->put('login.id', $user->id);
+            $request->session()->put('login.remember', $request->boolean('remember'));
+
+            // Store redirect URL for after 2FA
+            $redirect = $request->input('redirect');
+            if ($redirect && $this->isValidRedirectUrl($redirect)) {
+                $request->session()->put('url.intended', $redirect);
+            }
+
+            return redirect()->route('two-factor.challenge');
+        }
 
         $request->session()->regenerate();
 

@@ -5,7 +5,7 @@
     </div>
 
     <div class="mb-6 text-sm text-slate-300 bg-white/5 rounded-xl p-4">
-        {{ __('Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
+        {{ __('Please verify your email address by clicking the link we sent you. Check your spam folder if you don\'t see it.') }}
     </div>
 
     @if (session('status') == 'verification-link-sent')

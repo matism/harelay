@@ -45,13 +45,13 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        // Check for explicit redirect URL (from subdomain auth-required page)
+        // Store redirect URL in session for after email verification
         $redirect = $request->input('redirect');
         if ($redirect && $this->isValidRedirectUrl($redirect)) {
-            return redirect()->away($redirect);
+            session(['url.intended' => $redirect]);
         }
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect(route('verification.notice'));
     }
 
     /**
