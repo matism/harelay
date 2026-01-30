@@ -29,7 +29,7 @@
                                 Create Your Account
                             </h3>
                             <p class="mt-4 text-lg text-gray-500">
-                                Sign up for a free HARelay account. You'll get a unique subdomain (like <code class="bg-gray-200 px-2 py-1 rounded">yourname.harelay.io</code>) and a connection token for your Home Assistant.
+                                Sign up for a free HARelay account. You'll get a unique subdomain (like <code class="bg-gray-200 px-2 py-1 rounded">yourname.{{ config('app.proxy_domain') }}</code>) and a connection token for your Home Assistant.
                             </p>
                             <div class="mt-6">
                                 <a href="{{ route('register') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
@@ -99,7 +99,7 @@
                                 <div class="mb-4 text-gray-500"># Home Assistant Add-on Configuration</div>
                                 <div class="space-y-2">
                                     <div><span class="text-blue-400">connection_token:</span> "your-token-here"</div>
-                                    <div><span class="text-blue-400">server:</span> "wss://tunnel.harelay.io"</div>
+                                    <div><span class="text-blue-400">server:</span> "wss://tunnel.{{ config('app.proxy_domain') }}"</div>
                                     <div class="text-gray-500"># That's all you need!</div>
                                 </div>
                             </div>
@@ -120,7 +120,7 @@
                             </p>
                             <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
                                 <p class="text-blue-800">
-                                    <strong>Your URL:</strong> <code class="bg-blue-100 px-2 py-1 rounded">yourname.harelay.io</code>
+                                    <strong>Your URL:</strong> <code class="bg-blue-100 px-2 py-1 rounded">yourname.{{ config('app.proxy_domain') }}</code>
                                 </p>
                             </div>
                         </div>

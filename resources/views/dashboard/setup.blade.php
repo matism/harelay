@@ -44,7 +44,7 @@
                                 <div class="ml-3">
                                     <h3 class="text-sm font-medium text-green-800">Connection configured</h3>
                                     <p class="mt-1 text-sm text-green-700">
-                                        Your subdomain: <strong>{{ $connection->subdomain }}.harelay.io</strong>
+                                        Your subdomain: <strong>{{ $connection->subdomain }}.{{ config('app.proxy_domain') }}</strong>
                                     </p>
                                 </div>
                             </div>
@@ -153,8 +153,8 @@
                                 </p>
                                 @if($connection)
                                     <div class="mt-3">
-                                        <a href="https://{{ $connection->subdomain }}.harelay.io" target="_blank" class="text-blue-600 hover:text-blue-800 font-medium">
-                                            https://{{ $connection->subdomain }}.harelay.io
+                                        <a href="https://{{ $connection->subdomain }}.{{ config('app.proxy_domain') }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-medium">
+                                            https://{{ $connection->subdomain }}.{{ config('app.proxy_domain') }}
                                         </a>
                                     </div>
                                 @else

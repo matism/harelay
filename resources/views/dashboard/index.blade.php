@@ -42,8 +42,8 @@
                                 <div>
                                     <dt class="text-sm font-medium text-gray-500">Your URL</dt>
                                     <dd class="mt-1 text-sm text-gray-900">
-                                        <a href="https://{{ $connection->subdomain }}.harelay.io" target="_blank" class="text-blue-600 hover:text-blue-800">
-                                            {{ $connection->subdomain }}.harelay.io
+                                        <a href="https://{{ $connection->subdomain }}.{{ config('app.proxy_domain') }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                            {{ $connection->subdomain }}.{{ config('app.proxy_domain') }}
                                         </a>
                                     </dd>
                                 </div>

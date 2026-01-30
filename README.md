@@ -484,7 +484,7 @@ Valet makes wildcard subdomain testing easy:
 
 1. **Link the project with a custom domain**:
    ```bash
-   cd /path/to/homeassistantproxy
+   cd /path/to/harelay
    valet link harelay --secure
    ```
 

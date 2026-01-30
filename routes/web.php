@@ -31,14 +31,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Subdomain proxy routes
-// Note: In production, configure your web server to route *.harelay.io to this app
-// The subdomain is captured and passed to the ProxyController
-// Security: proxy.security middleware adds headers to prevent indexing
-Route::domain('{subdomain}.'.config('app.proxy_domain', 'harelay.io'))
+// Subdomain proxy routes (for production with nginx/apache)
+// Note: In local development, SubdomainProxy middleware handles this instead
+// because php artisan serve doesn't support Route::domain() properly
+Route::domain('{subdomain}.'.config('app.proxy_domain', 'harelay.com'))
     ->middleware(['web', 'proxy.security'])
     ->group(function () {
-        // Catch-all route for proxied requests
         Route::any('/{path?}', [ProxyController::class, 'handle'])
             ->where('path', '.*')
             ->name('proxy.handle');

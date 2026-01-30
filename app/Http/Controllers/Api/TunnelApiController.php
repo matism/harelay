@@ -150,6 +150,11 @@ class TunnelApiController extends Controller
 
         $pendingRequests = $this->tunnelManager->getPendingRequests($connection->subdomain);
 
+        \Log::debug('Poll request', [
+            'subdomain' => $connection->subdomain,
+            'pending_count' => count($pendingRequests),
+        ]);
+
         if (empty($pendingRequests)) {
             return response()->json([
                 'success' => true,
@@ -160,6 +165,12 @@ class TunnelApiController extends Controller
         // Return the first pending request
         $requestId = array_key_first($pendingRequests);
         $requestData = $pendingRequests[$requestId];
+
+        \Log::debug('Returning pending request', [
+            'request_id' => $requestId,
+            'method' => $requestData['method'] ?? 'unknown',
+            'uri' => $requestData['uri'] ?? 'unknown',
+        ]);
 
         return response()->json([
             'success' => true,

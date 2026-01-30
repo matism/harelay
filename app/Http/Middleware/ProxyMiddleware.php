@@ -18,7 +18,7 @@ class ProxyMiddleware
     {
         $host = $request->getHost();
 
-        // Extract subdomain from host (e.g., abc123.harelay.io -> abc123)
+        // Extract subdomain from host (e.g., abc123.harelay.com -> abc123)
         $subdomain = $this->extractSubdomain($host);
 
         if (! $subdomain) {
@@ -57,8 +57,11 @@ class ProxyMiddleware
 
     private function extractSubdomain(string $host): ?string
     {
-        // Match subdomain.harelay.io or subdomain.localhost for development
-        if (preg_match('/^([a-z0-9]+)\.harelay\.io$/i', $host, $matches)) {
+        $proxyDomain = config('app.proxy_domain', 'harelay.com');
+        $escapedDomain = preg_quote($proxyDomain, '/');
+
+        // Match subdomain.{proxy_domain}
+        if (preg_match('/^([a-z0-9]+)\.' . $escapedDomain . '$/i', $host, $matches)) {
             return strtolower($matches[1]);
         }
 

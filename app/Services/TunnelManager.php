@@ -128,6 +128,13 @@ class TunnelManager
     ): ?array {
         $requestId = Str::uuid()->toString();
 
+        \Log::debug('ProxyRequest starting', [
+            'subdomain' => $subdomain,
+            'request_id' => $requestId,
+            'method' => $method,
+            'uri' => $uri,
+        ]);
+
         // Store the request in pending cache
         $pendingKey = $this->getPendingCacheKey($subdomain);
         $pendingRequests = Cache::get($pendingKey, []);
@@ -139,6 +146,11 @@ class TunnelManager
             'created_at' => now()->toIso8601String(),
         ];
         Cache::put($pendingKey, $pendingRequests, self::REQUEST_TTL);
+
+        \Log::debug('Request stored in pending cache', [
+            'pending_key' => $pendingKey,
+            'total_pending' => count($pendingRequests),
+        ]);
 
         // Broadcast the request to the add-on via Reverb
         broadcast(new TunnelRequest(

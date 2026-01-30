@@ -112,12 +112,19 @@ class ProxyController extends Controller
         $headers = $responseData['headers'] ?? [];
         $body = $responseData['body'] ?? '';
 
+        // Check if body is base64 encoded
+        $isBase64 = ($headers['X-HARelay-Base64'] ?? '0') === '1';
+        if ($isBase64) {
+            $body = base64_decode($body);
+        }
+
         // Filter response headers
         $skipHeaders = [
             'transfer-encoding',
             'connection',
             'keep-alive',
             'content-encoding', // We handle decompression on the add-on side
+            'x-harelay-base64', // Internal header
         ];
 
         $filteredHeaders = [];

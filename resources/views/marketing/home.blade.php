@@ -94,7 +94,7 @@
                         </div>
                         <h3 class="mt-6 text-lg font-medium text-gray-900">Your Own Subdomain</h3>
                         <p class="mt-2 text-gray-500">
-                            Get a unique subdomain like yourname.harelay.io. Access your Home Assistant with a memorable URL.
+                            Get a unique subdomain like yourname.{{ config('app.proxy_domain') }}. Access your Home Assistant with a memorable URL.
                         </p>
                     </div>
                 </div>
