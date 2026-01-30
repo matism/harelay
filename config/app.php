@@ -60,11 +60,11 @@ return [
     |--------------------------------------------------------------------------
     |
     | This is the domain used for subdomain routing. Each user gets a
-    | subdomain like {subdomain}.harelay.io to access their Home Assistant.
+    | subdomain like {subdomain}.harelay.com to access their Home Assistant.
     |
     */
 
-    'proxy_domain' => env('APP_PROXY_DOMAIN', 'harelay.io'),
+    'proxy_domain' => env('APP_PROXY_DOMAIN', 'harelay.com'),
 
     /*
     |--------------------------------------------------------------------------

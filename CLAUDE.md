@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**HARelay** - A Laravel 12 application providing secure remote access to Home Assistant. Users get unique subdomains (e.g., `abc123.harelay.io`) and install a lightweight HA add-on that establishes a WebSocket tunnel for proxying requests.
+**HARelay** - A Laravel 12 application providing secure remote access to Home Assistant. Users get unique subdomains (e.g., `abc123.harelay.com`) and install a lightweight HA add-on that establishes a WebSocket tunnel for proxying requests.
 
 ### Key Components
 
@@ -101,7 +101,7 @@ resources/views/
 
 ### Request Flow
 
-1. User visits `subdomain.harelay.io/path`
+1. User visits `subdomain.harelay.com/path`
 2. `ProxyController` receives request
 3. `TunnelManager::proxyRequest()` broadcasts `TunnelRequest` event via Reverb
 4. HA add-on receives event on `private-tunnel.{subdomain}` channel
@@ -128,12 +128,47 @@ resources/views/
 
 Tests use in-memory SQLite. Run with `composer test` or `php artisan test`.
 
+### Testing the Tunnel Locally
+
+```bash
+# 1. Create a test user and connection
+php artisan tunnel:create-test
+# Output: test@example.com / password, subdomain, and token
+
+# 2. Run the tunnel simulator (simulates HA add-on)
+php artisan tunnel:simulate {subdomain} "{token}" --ha-url=http://localhost:8123
+
+# 3. Add to /etc/hosts: 127.0.0.1 {subdomain}.harelay.com
+# 4. Visit http://{subdomain}.harelay.com:8000 and log in
+```
+
+### Testing with Valet
+
+```bash
+# Link with custom domain
+valet link harelay --secure
+
+# Update .env
+APP_PROXY_DOMAIN=harelay.test
+APP_URL=https://harelay.test
+SESSION_DOMAIN=.harelay.test
+
+# Run Reverb separately (Valet handles PHP only)
+php artisan reverb:start
+```
+
+Valet automatically handles wildcard subdomains: `https://{subdomain}.harelay.test`
+
+### HA Add-on
+
+The Home Assistant add-on is in a separate repository at `../harelay-addon/`. See that project's README for development and deployment instructions.
+
 ## Environment Variables
 
 Key variables to configure:
 
 ```env
-APP_PROXY_DOMAIN=harelay.io          # Domain for subdomains
+APP_PROXY_DOMAIN=harelay.com          # Domain for subdomains
 BROADCAST_CONNECTION=reverb           # Use Reverb for WebSocket
 REVERB_HOST=localhost                 # WebSocket server host
 REVERB_PORT=8080                      # WebSocket server port
@@ -146,3 +181,12 @@ REVERB_SCHEME=http                    # http or https
 - Tokens shown only once to user (on create/regenerate)
 - Users must be authenticated to access their subdomain
 - Owner verification on all proxy requests
+- Subdomain routes include anti-crawling headers (X-Robots-Tag, X-Frame-Options)
+- Rate limiting on API endpoints (60 requests/minute)
+- Security headers on proxy responses (CSP, X-Content-Type-Options)
+
+## Working Guidelines
+
+- **Always update documentation**: When adding features, commands, or changing behavior, update both `README.md` and `CLAUDE.md`
+- **Run tests before committing**: Use `composer test` to verify changes
+- **Format code**: Run `./vendor/bin/pint` before committing

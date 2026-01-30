@@ -9,7 +9,7 @@ HARelay provides a secure tunnel between your Home Assistant instance and the in
 **Key Features:**
 - No port forwarding required
 - Works behind CGNAT and firewalls
-- Unique subdomain per user (e.g., `yourname.harelay.io`)
+- Unique subdomain per user (e.g., `yourname.harelay.com`)
 - End-to-end encryption via TLS
 - Session-based authentication
 
@@ -23,7 +23,7 @@ HARelay provides a secure tunnel between your Home Assistant instance and the in
         │                            │  - Proxy Controller              │
         │                            └──────────────────────────────────┘
         │                                       │
-        │ visits subdomain.harelay.io           │ WebSocket + HTTP API
+        │ visits subdomain.harelay.com           │ WebSocket + HTTP API
         │                                       │
         │                            ┌──────────────────────────────────┐
         └──────────────────────────► │      Home Assistant Add-on       │
@@ -77,8 +77,8 @@ Edit `.env` with your settings:
 
 ```env
 APP_NAME=HARelay
-APP_URL=https://harelay.io
-APP_PROXY_DOMAIN=harelay.io
+APP_URL=https://harelay.com
+APP_PROXY_DOMAIN=harelay.com
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -141,7 +141,7 @@ composer test
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `APP_PROXY_DOMAIN` | Domain for user subdomains | `harelay.io` |
+| `APP_PROXY_DOMAIN` | Domain for user subdomains | `harelay.com` |
 | `REVERB_HOST` | WebSocket server hostname | `localhost` |
 | `REVERB_PORT` | WebSocket server port | `8080` |
 | `REVERB_SCHEME` | WebSocket protocol (`http`/`https`) | `http` |
@@ -150,7 +150,7 @@ composer test
 
 For production, ensure:
 
-1. **TLS Certificates**: Configure SSL for both the main domain and wildcard subdomain (`*.harelay.io`)
+1. **TLS Certificates**: Configure SSL for both the main domain and wildcard subdomain (`*.harelay.com`)
 2. **Reverb TLS**: Set `REVERB_SCHEME=https` and configure TLS in `config/reverb.php`
 3. **Web Server**: Configure nginx/Apache to route wildcard subdomains to Laravel
 
@@ -159,7 +159,7 @@ Example nginx configuration for wildcard subdomains:
 ```nginx
 server {
     listen 443 ssl;
-    server_name *.harelay.io;
+    server_name *.harelay.com;
 
     ssl_certificate /path/to/wildcard.crt;
     ssl_certificate_key /path/to/wildcard.key;
@@ -205,16 +205,16 @@ Response:
     "success": true,
     "subdomain": "abc123",
     "websocket": {
-        "host": "harelay.io",
+        "host": "harelay.com",
         "port": 443,
         "scheme": "https",
         "key": "reverb-app-key",
         "channel": "private-tunnel.abc123"
     },
     "api": {
-        "auth_endpoint": "https://harelay.io/api/tunnel/auth",
-        "response_endpoint": "https://harelay.io/api/tunnel/response",
-        "heartbeat_endpoint": "https://harelay.io/api/tunnel/heartbeat"
+        "auth_endpoint": "https://harelay.com/api/tunnel/auth",
+        "response_endpoint": "https://harelay.com/api/tunnel/response",
+        "heartbeat_endpoint": "https://harelay.com/api/tunnel/heartbeat"
     }
 }
 ```
@@ -452,6 +452,99 @@ class HARelayTunnel:
                 )
 ```
 
+## Testing
+
+### Local Development Testing
+
+1. **Start all services**:
+   ```bash
+   composer dev
+   ```
+
+2. **Create a test user and connection**:
+   ```bash
+   php artisan tunnel:create-test
+   ```
+   This creates a user (`test@example.com` / `password`) with a connection and displays the token.
+
+3. **Run the tunnel simulator**:
+   ```bash
+   php artisan tunnel:simulate {subdomain} "{token}" --ha-url=http://localhost:8123
+   ```
+   Replace `{subdomain}` and `{token}` with the values from step 2.
+
+4. **Test subdomain access** (requires hosts file or DNS setup):
+   - Add to `/etc/hosts`: `127.0.0.1 {subdomain}.harelay.com`
+   - Visit `http://{subdomain}.harelay.com:8000` in your browser
+   - Log in with `test@example.com` / `password`
+
+### Testing with Laravel Valet
+
+Valet makes wildcard subdomain testing easy:
+
+1. **Link the project with a custom domain**:
+   ```bash
+   cd /path/to/homeassistantproxy
+   valet link harelay --secure
+   ```
+
+2. **Configure the proxy domain for Valet**:
+   ```env
+   # .env
+   APP_PROXY_DOMAIN=harelay.test
+   APP_URL=https://harelay.test
+   SESSION_DOMAIN=.harelay.test
+   ```
+
+   The `SESSION_DOMAIN` with a leading dot allows cookies to work across subdomains.
+
+3. **Park the parent directory** (if not already):
+   ```bash
+   cd /path/to/Sites
+   valet park
+   ```
+
+4. **Access subdomains**: Valet automatically handles `*.harelay.test`:
+   - Main site: `https://harelay.test`
+   - Subdomain: `https://{subdomain}.harelay.test`
+
+5. **Run Reverb separately** (Valet handles PHP, but not WebSocket):
+   ```bash
+   php artisan reverb:start
+   ```
+
+Note: For the tunnel to work, both the main Laravel app (via Valet) and Reverb must be running.
+
+### Testing with Real Home Assistant
+
+1. **On HARelay server**: Create your account and connection at `/dashboard/settings`
+
+2. **On Home Assistant**: Either:
+   - Install the HARelay add-on (when published), or
+   - Run the Python client manually from the [harelay-addon](https://github.com/harelay/harelay-addon) repository:
+     ```bash
+     pip install aiohttp websockets
+     python run.py --token "YOUR_TOKEN" --server "https://harelay.com" --ha-url "http://localhost:8123"
+     ```
+
+3. **Access your HA**: Visit `https://{your-subdomain}.harelay.com`
+
+### Testing the Tunnel Without HA
+
+Use the simulator with a simple HTTP server:
+
+```bash
+# Terminal 1: Start a simple HTTP server
+python -m http.server 8123
+
+# Terminal 2: Start HARelay
+composer dev
+
+# Terminal 3: Create test and run simulator
+php artisan tunnel:create-test
+php artisan tunnel:simulate {subdomain} "{token}" --ha-url=http://localhost:8123
+```
+
 ## Security Considerations
 
 1. **Connection Tokens**: Tokens are hashed in the database and shown only once to users
@@ -460,6 +553,9 @@ class HARelayTunnel:
 4. **TLS Encryption**: All traffic encrypted in transit
 5. **No Port Exposure**: Home Assistant never exposes ports to the internet
 6. **Token Rotation**: Users can regenerate tokens if compromised
+7. **No Crawling**: Subdomain routes include `X-Robots-Tag: noindex` headers
+8. **Rate Limiting**: API endpoints are rate-limited to prevent abuse
+9. **Security Headers**: Proxy responses include security headers (X-Frame-Options, CSP, etc.)
 
 ## Troubleshooting
 

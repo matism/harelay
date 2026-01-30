@@ -34,8 +34,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Subdomain proxy routes
 // Note: In production, configure your web server to route *.harelay.io to this app
 // The subdomain is captured and passed to the ProxyController
+// Security: proxy.security middleware adds headers to prevent indexing
 Route::domain('{subdomain}.'.config('app.proxy_domain', 'harelay.io'))
-    ->middleware('web')
+    ->middleware(['web', 'proxy.security'])
     ->group(function () {
         // Catch-all route for proxied requests
         Route::any('/{path?}', [ProxyController::class, 'handle'])

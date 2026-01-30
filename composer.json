@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "harelay/harelay",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Secure remote access proxy for Home Assistant",
+    "keywords": ["home-assistant", "proxy", "websocket", "laravel"],
     "license": "MIT",
     "require": {
         "php": "^8.2",

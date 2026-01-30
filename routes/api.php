@@ -15,16 +15,23 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Tunnel API endpoints (for HA add-on communication)
-Route::prefix('tunnel')->group(function () {
+// Rate limited to prevent abuse
+Route::prefix('tunnel')->middleware('throttle:120,1')->group(function () {
     // Add-on authentication for WebSocket channel
     Route::post('/auth', [TunnelAuthController::class, 'auth']);
 
     // Add-on lifecycle
-    Route::post('/connect', [TunnelApiController::class, 'connect']);
-    Route::post('/disconnect', [TunnelApiController::class, 'disconnect']);
+    Route::post('/connect', [TunnelApiController::class, 'connect'])
+        ->middleware('throttle:10,1'); // 10 connects per minute max
+
+    Route::post('/disconnect', [TunnelApiController::class, 'disconnect'])
+        ->middleware('throttle:10,1');
+
     Route::post('/heartbeat', [TunnelApiController::class, 'heartbeat']);
 
-    // Request/Response handling
-    Route::post('/response', [TunnelApiController::class, 'submitResponse']);
+    // Request/Response handling - higher limit for active tunneling
+    Route::post('/response', [TunnelApiController::class, 'submitResponse'])
+        ->middleware('throttle:300,1'); // Allow high throughput for responses
+
     Route::post('/poll', [TunnelApiController::class, 'pollRequests']);
 });
