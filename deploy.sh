@@ -111,10 +111,11 @@ if [[ -d "$APP_DIR/node_modules" ]]; then
     exit 1
 fi
 
-# Fix npm cache ownership (common issue when npm was run as root)
-# Create the directory if it doesn't exist, then fix ownership
+# Fix common /var/www ownership issues
 mkdir -p "/var/www/.npm"
+mkdir -p "/var/www/.config"
 chown -R "$APP_USER:$APP_GROUP" "/var/www/.npm"
+chown -R "$APP_USER:$APP_GROUP" "/var/www/.config"
 
 # Create node_modules with correct ownership
 mkdir -p "$APP_DIR/node_modules"

@@ -6,10 +6,10 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             @if($connection)
                 <!-- Connection Info -->
-                <div class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl sm:rounded-2xl border border-white/20">
+                <div class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl rounded-2xl border border-white/20">
                     <div class="p-6 sm:p-8">
                         <h3 class="text-lg font-semibold text-white mb-1">Connection Details</h3>
                         <p class="text-slate-400 text-sm mb-6">Your HARelay connection information.</p>
@@ -84,7 +84,7 @@
                 </div>
 
                 <!-- Relink Device -->
-                <div class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl sm:rounded-2xl border border-white/20">
+                <div class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl rounded-2xl border border-white/20">
                     <div class="p-6 sm:p-8">
                         <h3 class="text-lg font-semibold text-white mb-1">Relink Device</h3>
                         <p class="text-slate-400 text-sm mb-6">
@@ -115,7 +115,7 @@
                 </div>
 
                 <!-- Danger Zone -->
-                <div class="bg-red-500/10 backdrop-blur-lg overflow-hidden shadow-xl sm:rounded-2xl border border-red-500/20">
+                <div class="bg-red-500/10 backdrop-blur-lg overflow-hidden shadow-xl rounded-2xl border border-red-500/20">
                     <div class="p-6 sm:p-8">
                         <h3 class="text-lg font-semibold text-red-400 mb-1">Danger Zone</h3>
                         <p class="text-slate-400 text-sm mb-6">
@@ -137,7 +137,7 @@
                 </div>
             @else
                 <!-- No Connection State -->
-                <div class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl sm:rounded-2xl border border-white/20">
+                <div class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl rounded-2xl border border-white/20">
                     <div class="p-8 text-center">
                         <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-500/20 mb-4">
                             <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

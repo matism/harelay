@@ -6,8 +6,8 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl sm:rounded-2xl border border-white/20">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl rounded-2xl border border-white/20">
                 <div class="p-6 sm:p-8">
                     <h3 class="text-xl font-semibold text-white mb-2">Connect Your Home Assistant</h3>
                     <p class="text-slate-400 mb-8">Follow these steps to set up remote access in just a few minutes.</p>
