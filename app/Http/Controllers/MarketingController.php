@@ -11,13 +11,18 @@ class MarketingController extends Controller
         return view('marketing.home');
     }
 
-    public function pricing(): View
-    {
-        return view('marketing.pricing');
-    }
-
     public function howItWorks(): View
     {
         return view('marketing.how-it-works');
+    }
+
+    public function privacy(): View
+    {
+        return view('marketing.privacy');
+    }
+
+    public function imprint(): View
+    {
+        return view('marketing.imprint');
     }
 }

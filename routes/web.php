@@ -10,8 +10,9 @@ use Illuminate\Support\Facades\Route;
 
 // Marketing routes
 Route::get('/', [MarketingController::class, 'home'])->name('marketing.home');
-Route::get('/pricing', [MarketingController::class, 'pricing'])->name('marketing.pricing');
 Route::get('/how-it-works', [MarketingController::class, 'howItWorks'])->name('marketing.how-it-works');
+Route::get('/privacy', [MarketingController::class, 'privacy'])->name('marketing.privacy');
+Route::get('/imprint', [MarketingController::class, 'imprint'])->name('marketing.imprint');
 
 // Device linking
 Route::get('/link', [DeviceLinkController::class, 'show'])->name('device.link');

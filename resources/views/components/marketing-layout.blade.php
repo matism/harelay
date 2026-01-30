@@ -10,39 +10,37 @@
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-white">
+    <body class="font-sans antialiased bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 min-h-screen">
         <!-- Navigation -->
-        <nav class="bg-white border-b border-gray-100">
+        <nav class="bg-white/5 backdrop-blur-lg border-b border-white/10 sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
                     <div class="flex items-center">
-                        <a href="/" class="text-xl font-bold text-blue-600">
-                            HARelay
+                        <a href="/" class="flex items-center space-x-2">
+                            <x-application-logo class="w-8 h-8 text-cyan-400" />
+                            <span class="text-xl font-bold text-white">HARelay</span>
                         </a>
                         <div class="hidden sm:ml-10 sm:flex sm:space-x-8">
-                            <a href="{{ route('marketing.pricing') }}" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700">
-                                Pricing
-                            </a>
-                            <a href="{{ route('marketing.how-it-works') }}" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                            <a href="{{ route('marketing.how-it-works') }}" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-slate-300 hover:text-white transition">
                                 How It Works
                             </a>
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
                         @auth
-                            <a href="{{ route('dashboard') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">
+                            <a href="{{ route('dashboard') }}" class="text-sm font-medium text-slate-300 hover:text-white transition">
                                 Dashboard
                             </a>
                         @else
-                            <a href="{{ route('login') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">
-                                Log in
+                            <a href="{{ route('login') }}" class="text-sm font-medium text-slate-300 hover:text-white transition">
+                                Sign in
                             </a>
-                            <a href="{{ route('register') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                            <a href="{{ route('register') }}" class="inline-flex items-center px-4 py-2 bg-cyan-500 hover:bg-cyan-400 border border-transparent rounded-lg font-semibold text-sm text-slate-900 transition">
                                 Get Started
                             </a>
                         @endauth
@@ -57,20 +55,62 @@
         </main>
 
         <!-- Footer -->
-        <footer class="bg-gray-50 border-t border-gray-100">
+        <footer class="bg-white/5 backdrop-blur-lg border-t border-white/10">
             <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-                <div class="flex flex-col md:flex-row justify-between items-center">
-                    <div class="text-gray-400 text-sm">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <!-- Brand -->
+                    <div class="md:col-span-2">
+                        <a href="/" class="flex items-center space-x-2">
+                            <x-application-logo class="w-8 h-8 text-cyan-400" />
+                            <span class="text-xl font-bold text-white">HARelay</span>
+                        </a>
+                        <p class="mt-4 text-slate-400 text-sm max-w-md">
+                            Secure remote access to your Home Assistant without port forwarding. Simple setup, powerful connection.
+                        </p>
+                    </div>
+
+                    <!-- Links -->
+                    <div>
+                        <h3 class="text-sm font-semibold text-white uppercase tracking-wider">Product</h3>
+                        <ul class="mt-4 space-y-3">
+                            <li>
+                                <a href="{{ route('marketing.how-it-works') }}" class="text-slate-400 hover:text-white text-sm transition">
+                                    How It Works
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('register') }}" class="text-slate-400 hover:text-white text-sm transition">
+                                    Get Started
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Legal -->
+                    <div>
+                        <h3 class="text-sm font-semibold text-white uppercase tracking-wider">Legal</h3>
+                        <ul class="mt-4 space-y-3">
+                            <li>
+                                <a href="{{ route('marketing.privacy') }}" class="text-slate-400 hover:text-white text-sm transition">
+                                    Privacy Policy
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('marketing.imprint') }}" class="text-slate-400 hover:text-white text-sm transition">
+                                    Imprint
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center">
+                    <p class="text-slate-500 text-sm">
                         &copy; {{ date('Y') }} HARelay. All rights reserved.
-                    </div>
-                    <div class="flex space-x-6 mt-4 md:mt-0">
-                        <a href="{{ route('marketing.pricing') }}" class="text-gray-400 hover:text-gray-500 text-sm">
-                            Pricing
-                        </a>
-                        <a href="{{ route('marketing.how-it-works') }}" class="text-gray-400 hover:text-gray-500 text-sm">
-                            How It Works
-                        </a>
-                    </div>
+                    </p>
+                    <p class="text-slate-500 text-sm mt-4 md:mt-0">
+                        Made for the Home Assistant community
+                    </p>
                 </div>
             </div>
         </footer>

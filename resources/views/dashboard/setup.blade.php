@@ -1,75 +1,39 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-white leading-tight">
             {{ __('Setup Guide') }}
         </h2>
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-6">Connect Your Home Assistant</h3>
-
-                    @if(!$connection)
-                        <!-- Create Connection First -->
-                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                            <div class="flex">
-                                <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                </svg>
-                                <div class="ml-3">
-                                    <h3 class="text-sm font-medium text-yellow-800">Connection not set up</h3>
-                                    <p class="mt-2 text-sm text-yellow-700">
-                                        Create your connection first to get your subdomain and connection token.
-                                    </p>
-                                    <div class="mt-4">
-                                        <form action="{{ route('connection.store') }}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                                Create Connection
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @else
-                        <!-- Connection Info -->
-                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                            <div class="flex">
-                                <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                </svg>
-                                <div class="ml-3">
-                                    <h3 class="text-sm font-medium text-green-800">Connection configured</h3>
-                                    <p class="mt-1 text-sm text-green-700">
-                                        Your subdomain: <strong>{{ $connection->subdomain }}.{{ config('app.proxy_domain') }}</strong>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
+        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl sm:rounded-2xl border border-white/20">
+                <div class="p-6 sm:p-8">
+                    <h3 class="text-xl font-semibold text-white mb-2">Connect Your Home Assistant</h3>
+                    <p class="text-slate-400 mb-8">Follow these steps to set up remote access in just a few minutes.</p>
 
                     <!-- Setup Steps -->
                     <div class="space-y-8">
                         <!-- Step 1 -->
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100 text-blue-600 font-bold">
+                                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-cyan-500/20 text-cyan-400 font-bold ring-2 ring-cyan-500/30">
                                     1
                                 </div>
                             </div>
-                            <div class="ml-4">
-                                <h4 class="text-lg font-medium text-gray-900">Add the HARelay Repository</h4>
-                                <p class="mt-2 text-gray-500">
-                                    In Home Assistant, go to <strong>Settings &rarr; Add-ons &rarr; Add-on Store</strong>.
-                                    Click the three dots in the top right and select <strong>Repositories</strong>.
+                            <div class="ml-5">
+                                <h4 class="text-lg font-medium text-white">Add the HARelay Repository</h4>
+                                <p class="mt-2 text-slate-400">
+                                    In Home Assistant, go to <span class="text-white">Settings</span> &rarr; <span class="text-white">Add-ons</span> &rarr; <span class="text-white">Add-on Store</span>.
+                                    Click the three dots in the top right and select <span class="text-white">Repositories</span>.
                                 </p>
-                                <div class="mt-3 bg-gray-100 rounded-lg p-3">
-                                    <code class="text-sm text-gray-800">https://github.com/harelay/ha-addon</code>
-                                    <button onclick="navigator.clipboard.writeText('https://github.com/harelay/ha-addon')" class="ml-2 text-blue-600 hover:text-blue-800 text-sm">
-                                        Copy
+                                <div class="mt-3 flex items-center bg-white/5 rounded-lg p-4 ring-1 ring-white/10">
+                                    <code class="text-cyan-400 text-sm flex-1">https://github.com/harelay/ha-addon</code>
+                                    <button onclick="navigator.clipboard.writeText('https://github.com/harelay/ha-addon')"
+                                        class="ml-3 text-slate-400 hover:text-white transition">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                        </svg>
                                     </button>
                                 </div>
                             </div>
@@ -78,14 +42,14 @@
                         <!-- Step 2 -->
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100 text-blue-600 font-bold">
+                                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-cyan-500/20 text-cyan-400 font-bold ring-2 ring-cyan-500/30">
                                     2
                                 </div>
                             </div>
-                            <div class="ml-4">
-                                <h4 class="text-lg font-medium text-gray-900">Install the Add-on</h4>
-                                <p class="mt-2 text-gray-500">
-                                    Find <strong>HARelay Tunnel</strong> in the add-on store and click <strong>Install</strong>.
+                            <div class="ml-5">
+                                <h4 class="text-lg font-medium text-white">Install the Add-on</h4>
+                                <p class="mt-2 text-slate-400">
+                                    Find <span class="text-white">HARelay Tunnel</span> in the add-on store and click <span class="text-white">Install</span>.
                                     Wait for the installation to complete.
                                 </p>
                             </div>
@@ -94,74 +58,111 @@
                         <!-- Step 3 -->
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100 text-blue-600 font-bold">
+                                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-cyan-500/20 text-cyan-400 font-bold ring-2 ring-cyan-500/30">
                                     3
                                 </div>
                             </div>
-                            <div class="ml-4">
-                                <h4 class="text-lg font-medium text-gray-900">Configure the Add-on</h4>
-                                <p class="mt-2 text-gray-500">
-                                    Go to the add-on's <strong>Configuration</strong> tab and enter your connection token:
+                            <div class="ml-5">
+                                <h4 class="text-lg font-medium text-white">Start the Add-on</h4>
+                                <p class="mt-2 text-slate-400">
+                                    Click <span class="text-white">Start</span> to begin the add-on. No configuration is needed - the add-on will automatically enter pairing mode.
                                 </p>
-                                @if($connection)
-                                    <div class="mt-3 bg-gray-900 rounded-lg p-4 text-green-400 font-mono text-sm">
-                                        <div><span class="text-blue-400">connection_token:</span> "{{ session('plain_token') ?? '********' }}"</div>
-                                        @if(session('plain_token'))
-                                            <p class="mt-2 text-yellow-400 text-xs">Save this token now - it won't be shown again!</p>
-                                        @else
-                                            <p class="mt-2 text-gray-500 text-xs">
-                                                <a href="{{ route('dashboard.settings') }}" class="text-blue-400 hover:text-blue-300">Regenerate token</a> to see it again.
-                                            </p>
-                                        @endif
-                                    </div>
-                                @else
-                                    <div class="mt-3 bg-gray-100 rounded-lg p-3 text-gray-500">
-                                        Create your connection above to see your token.
-                                    </div>
-                                @endif
+                                <p class="mt-2 text-slate-400">
+                                    Enable <span class="text-white">Start on boot</span> for automatic reconnection after restarts.
+                                </p>
                             </div>
                         </div>
 
                         <!-- Step 4 -->
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100 text-blue-600 font-bold">
+                                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-cyan-500/20 text-cyan-400 font-bold ring-2 ring-cyan-500/30">
                                     4
                                 </div>
                             </div>
-                            <div class="ml-4">
-                                <h4 class="text-lg font-medium text-gray-900">Start the Add-on</h4>
-                                <p class="mt-2 text-gray-500">
-                                    Click <strong>Start</strong> to begin the tunnel connection. Enable <strong>Start on boot</strong> for automatic reconnection.
+                            <div class="ml-5">
+                                <h4 class="text-lg font-medium text-white">Open the Add-on Web UI</h4>
+                                <p class="mt-2 text-slate-400">
+                                    Click <span class="text-white">Open Web UI</span> in the add-on page. You'll see a pairing code displayed.
                                 </p>
+                                <div class="mt-4 bg-slate-800/50 rounded-xl p-6 ring-1 ring-white/10">
+                                    <p class="text-slate-400 text-sm mb-3">Example pairing code:</p>
+                                    <div class="text-center">
+                                        <span class="text-4xl font-mono font-bold text-white tracking-wider">ABCD-1234</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Step 5 -->
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-green-100 text-green-600 font-bold">
+                                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-cyan-500/20 text-cyan-400 font-bold ring-2 ring-cyan-500/30">
+                                    5
+                                </div>
+                            </div>
+                            <div class="ml-5">
+                                <h4 class="text-lg font-medium text-white">Enter the Code</h4>
+                                <p class="mt-2 text-slate-400">
+                                    Enter the pairing code shown in your add-on to link your device.
+                                </p>
+                                <div class="mt-4">
+                                    <a href="{{ route('device.link') }}" target="_blank"
+                                        class="inline-flex items-center px-5 py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold rounded-lg transition">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                        </svg>
+                                        Enter Pairing Code
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 6 (Success) -->
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <div class="flex items-center justify-center h-10 w-10 rounded-full bg-green-500/20 text-green-400 ring-2 ring-green-500/30">
                                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                     </svg>
                                 </div>
                             </div>
-                            <div class="ml-4">
-                                <h4 class="text-lg font-medium text-gray-900">Access Your Home Assistant</h4>
-                                <p class="mt-2 text-gray-500">
-                                    Once connected, access your Home Assistant at:
+                            <div class="ml-5">
+                                <h4 class="text-lg font-medium text-white">Access Your Home Assistant</h4>
+                                <p class="mt-2 text-slate-400">
+                                    Once paired, your add-on will automatically connect. Access your Home Assistant from anywhere at:
                                 </p>
                                 @if($connection)
-                                    <div class="mt-3">
-                                        <a href="{{ $connection->getProxyUrl() }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-medium">
+                                    <div class="mt-4 bg-white/5 rounded-xl p-4 ring-1 ring-white/10">
+                                        <a href="{{ $connection->getProxyUrl() }}" target="_blank"
+                                            class="text-lg font-medium text-cyan-400 hover:text-cyan-300 transition break-all">
                                             {{ $connection->getProxyUrl() }}
                                         </a>
                                     </div>
                                 @else
-                                    <div class="mt-3 text-gray-400">
-                                        Create your connection to get your URL.
+                                    <div class="mt-4 bg-white/5 rounded-xl p-4 ring-1 ring-white/10 text-slate-400">
+                                        Your URL will appear here after pairing.
                                     </div>
                                 @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Help Section -->
+                    <div class="mt-12 pt-8 border-t border-white/10">
+                        <h4 class="text-lg font-medium text-white mb-4">Need Help?</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="bg-white/5 rounded-xl p-5 ring-1 ring-white/10">
+                                <h5 class="text-white font-medium mb-2">Add-on not starting?</h5>
+                                <p class="text-slate-400 text-sm">
+                                    Check the add-on logs for error messages. Make sure you have an active internet connection.
+                                </p>
+                            </div>
+                            <div class="bg-white/5 rounded-xl p-5 ring-1 ring-white/10">
+                                <h5 class="text-white font-medium mb-2">Connection issues?</h5>
+                                <p class="text-slate-400 text-sm">
+                                    Try restarting the add-on. If problems persist, delete your connection in Settings and pair again.
+                                </p>
                             </div>
                         </div>
                     </div>

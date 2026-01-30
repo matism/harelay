@@ -2,225 +2,271 @@
     <x-slot name="title">How It Works - HARelay</x-slot>
     <x-slot name="description">Learn how HARelay provides secure remote access to your Home Assistant in three simple steps.</x-slot>
 
-    <div class="bg-white">
-        <!-- Header -->
-        <div class="max-w-7xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="py-16 sm:py-24">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
-                <h1 class="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight lg:text-6xl">
+                <h1 class="text-4xl sm:text-5xl font-bold text-white">
                     How HARelay Works
                 </h1>
-                <p class="mt-5 max-w-xl mx-auto text-xl text-gray-500">
+                <p class="mt-6 text-xl text-slate-400 max-w-2xl mx-auto">
                     Secure remote access in three simple steps. No networking expertise required.
                 </p>
             </div>
         </div>
+    </div>
 
-        <!-- Steps -->
-        <div class="bg-gray-50 py-16">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="space-y-16">
-                    <!-- Step 1 -->
-                    <div class="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-center">
-                        <div>
-                            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white text-xl font-bold">
-                                1
-                            </div>
-                            <h3 class="mt-6 text-2xl font-extrabold text-gray-900">
-                                Create Your Account
-                            </h3>
-                            <p class="mt-4 text-lg text-gray-500">
-                                Sign up for a free HARelay account. You'll get a unique subdomain (like <code class="bg-gray-200 px-2 py-1 rounded">yourname.{{ config('app.proxy_domain') }}</code>) and a connection token for your Home Assistant.
-                            </p>
-                            <div class="mt-6">
-                                <a href="{{ route('register') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
-                                    Create Free Account
-                                </a>
-                            </div>
+    <!-- Steps -->
+    <div class="py-16 bg-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="space-y-24">
+                <!-- Step 1 -->
+                <div class="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+                    <div>
+                        <div class="w-14 h-14 rounded-full bg-cyan-500/20 flex items-center justify-center ring-2 ring-cyan-500/30">
+                            <span class="text-2xl font-bold text-cyan-400">1</span>
                         </div>
-                        <div class="mt-10 lg:mt-0">
-                            <div class="bg-white rounded-lg shadow-lg p-6">
-                                <div class="border-b border-gray-200 pb-4 mb-4">
-                                    <div class="flex items-center space-x-2">
-                                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                                    </div>
-                                </div>
-                                <div class="space-y-4">
-                                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                                    <div class="h-10 bg-gray-100 rounded"></div>
-                                    <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-                                    <div class="h-10 bg-gray-100 rounded"></div>
-                                    <div class="h-10 bg-blue-600 rounded text-center text-white text-sm flex items-center justify-center">
-                                        Sign Up
-                                    </div>
+                        <h3 class="mt-6 text-2xl font-bold text-white">
+                            Create Your Account
+                        </h3>
+                        <p class="mt-4 text-lg text-slate-400">
+                            Sign up for a free HARelay account. You'll get a unique subdomain (like <code class="bg-white/10 px-2 py-1 rounded text-cyan-400">yourname.{{ config('app.proxy_domain') }}</code>) automatically assigned to you.
+                        </p>
+                        <div class="mt-6">
+                            <a href="{{ route('register') }}" class="inline-flex items-center px-5 py-3 bg-cyan-500 hover:bg-cyan-400 border border-transparent rounded-lg font-semibold text-slate-900 transition">
+                                Create Free Account
+                            </a>
+                        </div>
+                    </div>
+                    <div class="mt-10 lg:mt-0">
+                        <div class="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-6 shadow-xl">
+                            <div class="flex items-center space-x-2 mb-4">
+                                <div class="w-3 h-3 rounded-full bg-red-500/60"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500/60"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500/60"></div>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="h-4 bg-white/10 rounded w-3/4"></div>
+                                <div class="h-12 bg-white/5 rounded border border-white/10"></div>
+                                <div class="h-4 bg-white/10 rounded w-1/2"></div>
+                                <div class="h-12 bg-white/5 rounded border border-white/10"></div>
+                                <div class="h-12 bg-cyan-500 rounded text-center text-slate-900 text-sm font-semibold flex items-center justify-center">
+                                    Create Account
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Step 2 -->
-                    <div class="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-center">
-                        <div class="lg:order-2">
-                            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white text-xl font-bold">
-                                2
-                            </div>
-                            <h3 class="mt-6 text-2xl font-extrabold text-gray-900">
-                                Install the Home Assistant Add-on
-                            </h3>
-                            <p class="mt-4 text-lg text-gray-500">
-                                Add our repository to Home Assistant and install the HARelay add-on. Enter your connection token in the add-on configuration - that's it!
-                            </p>
-                            <div class="mt-6">
-                                <ul class="space-y-3 text-gray-500">
-                                    <li class="flex items-start">
-                                        <svg class="flex-shrink-0 h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        <span class="ml-3">No port forwarding required</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <svg class="flex-shrink-0 h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        <span class="ml-3">No dynamic DNS needed</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <svg class="flex-shrink-0 h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        <span class="ml-3">Works behind CGNAT and firewalls</span>
-                                    </li>
-                                </ul>
-                            </div>
+                <!-- Step 2 -->
+                <div class="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+                    <div class="lg:order-2">
+                        <div class="w-14 h-14 rounded-full bg-cyan-500/20 flex items-center justify-center ring-2 ring-cyan-500/30">
+                            <span class="text-2xl font-bold text-cyan-400">2</span>
                         </div>
-                        <div class="mt-10 lg:mt-0 lg:order-1">
-                            <div class="bg-gray-900 rounded-lg shadow-lg p-6 text-green-400 font-mono text-sm">
-                                <div class="mb-4 text-gray-500"># Home Assistant Add-on Configuration</div>
-                                <div class="space-y-2">
-                                    <div><span class="text-blue-400">connection_token:</span> "your-token-here"</div>
-                                    <div><span class="text-blue-400">server:</span> "wss://tunnel.{{ config('app.proxy_domain') }}"</div>
-                                    <div class="text-gray-500"># That's all you need!</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 3 -->
-                    <div class="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-center">
-                        <div>
-                            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-600 text-white text-xl font-bold">
-                                3
-                            </div>
-                            <h3 class="mt-6 text-2xl font-extrabold text-gray-900">
-                                Access From Anywhere
-                            </h3>
-                            <p class="mt-4 text-lg text-gray-500">
-                                Visit your unique subdomain from any device, anywhere in the world. Log in with your HARelay account and you'll be securely connected to your Home Assistant.
-                            </p>
-                            <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <p class="text-blue-800">
-                                    <strong>Your URL:</strong> <code class="bg-blue-100 px-2 py-1 rounded">yourname.{{ config('app.proxy_domain') }}</code>
-                                </p>
-                            </div>
-                        </div>
-                        <div class="mt-10 lg:mt-0">
-                            <div class="bg-white rounded-lg shadow-lg p-6 border-2 border-blue-500">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center space-x-2">
-                                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                                        <span class="text-sm text-gray-500">Connected</span>
-                                    </div>
-                                    <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Secure</span>
-                                </div>
-                                <div class="text-center py-8">
-                                    <svg class="w-16 h-16 mx-auto text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        <h3 class="mt-6 text-2xl font-bold text-white">
+                            Install the Home Assistant Add-on
+                        </h3>
+                        <p class="mt-4 text-lg text-slate-400">
+                            Add our repository to Home Assistant and install the HARelay add-on. Start the add-on and it will automatically enter pairing mode.
+                        </p>
+                        <div class="mt-6">
+                            <ul class="space-y-3">
+                                <li class="flex items-start text-slate-300">
+                                    <svg class="flex-shrink-0 w-6 h-6 text-green-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                     </svg>
-                                    <p class="mt-4 text-lg font-medium text-gray-900">Home Assistant</p>
-                                    <p class="text-sm text-gray-500">Your smart home, accessible everywhere</p>
+                                    <span class="ml-3">No port forwarding required</span>
+                                </li>
+                                <li class="flex items-start text-slate-300">
+                                    <svg class="flex-shrink-0 w-6 h-6 text-green-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="ml-3">No dynamic DNS needed</span>
+                                </li>
+                                <li class="flex items-start text-slate-300">
+                                    <svg class="flex-shrink-0 w-6 h-6 text-green-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span class="ml-3">Works behind CGNAT and firewalls</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mt-10 lg:mt-0 lg:order-1">
+                        <div class="bg-slate-800 rounded-2xl shadow-xl p-6 font-mono text-sm">
+                            <div class="text-slate-500 mb-4"># Home Assistant Add-on Repository</div>
+                            <div class="space-y-2">
+                                <div class="text-cyan-400">https://github.com/harelay/ha-addon</div>
+                                <div class="mt-6 text-slate-500"># That's all you need to add!</div>
+                                <div class="text-slate-500"># No configuration required - just start the add-on</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+                    <div>
+                        <div class="w-14 h-14 rounded-full bg-cyan-500/20 flex items-center justify-center ring-2 ring-cyan-500/30">
+                            <span class="text-2xl font-bold text-cyan-400">3</span>
+                        </div>
+                        <h3 class="mt-6 text-2xl font-bold text-white">
+                            Enter the Pairing Code
+                        </h3>
+                        <p class="mt-4 text-lg text-slate-400">
+                            The add-on displays a simple pairing code. Open the add-on's web interface, copy the code, and enter it on HARelay. Your Home Assistant is now connected and accessible from anywhere!
+                        </p>
+                        <div class="mt-6 bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4">
+                            <p class="text-cyan-300">
+                                <strong>Your URL:</strong> <code class="bg-cyan-500/20 px-2 py-1 rounded">yourname.{{ config('app.proxy_domain') }}</code>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-10 lg:mt-0">
+                        <div class="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-8 shadow-xl">
+                            <div class="text-center">
+                                <p class="text-slate-400 text-sm mb-4">Your pairing code</p>
+                                <div class="text-4xl font-mono font-bold text-white tracking-wider">
+                                    ABCD-1234
                                 </div>
+                                <p class="mt-4 text-slate-400 text-sm">Enter this code at harelay.com/link</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Architecture Diagram -->
-        <div class="py-16">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="text-center mb-12">
-                    <h2 class="text-3xl font-extrabold text-gray-900">
-                        Behind the Scenes
+    <!-- Architecture Diagram -->
+    <div class="py-24">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-white">
+                    Behind the Scenes
+                </h2>
+                <p class="mt-4 text-lg text-slate-400">
+                    HARelay creates a secure tunnel between your Home Assistant and our servers.
+                </p>
+            </div>
+
+            <div class="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                    <!-- Your Device -->
+                    <div class="text-center">
+                        <div class="bg-white/10 rounded-xl p-6 border border-white/10">
+                            <svg class="w-12 h-12 mx-auto text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                            </svg>
+                            <p class="mt-4 font-medium text-white">Your Device</p>
+                            <p class="text-sm text-slate-400">Phone, laptop, tablet</p>
+                        </div>
+                    </div>
+
+                    <!-- HARelay Server -->
+                    <div class="text-center">
+                        <div class="flex items-center justify-center mb-4">
+                            <div class="h-px bg-cyan-500/30 w-full"></div>
+                            <span class="px-3 text-sm text-cyan-400 whitespace-nowrap">HTTPS</span>
+                            <div class="h-px bg-cyan-500/30 w-full"></div>
+                        </div>
+                        <div class="bg-cyan-500 rounded-xl p-6">
+                            <svg class="w-12 h-12 mx-auto text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                            </svg>
+                            <p class="mt-4 font-medium text-slate-900">HARelay</p>
+                            <p class="text-sm text-slate-700">Secure tunnel server</p>
+                        </div>
+                        <div class="flex items-center justify-center mt-4">
+                            <div class="h-px bg-green-500/30 w-full"></div>
+                            <span class="px-3 text-sm text-green-400 whitespace-nowrap">WebSocket</span>
+                            <div class="h-px bg-green-500/30 w-full"></div>
+                        </div>
+                    </div>
+
+                    <!-- Home Assistant -->
+                    <div class="text-center">
+                        <div class="bg-white/10 rounded-xl p-6 border border-white/10">
+                            <x-application-logo class="w-12 h-12 mx-auto text-cyan-400" />
+                            <p class="mt-4 font-medium text-white">Home Assistant</p>
+                            <p class="text-sm text-slate-400">Your smart home</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="py-24 bg-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="lg:grid lg:grid-cols-3 lg:gap-8">
+                <div>
+                    <h2 class="text-3xl font-bold text-white">
+                        Frequently asked questions
                     </h2>
-                    <p class="mt-4 text-lg text-gray-500">
-                        HARelay creates a secure tunnel between your Home Assistant and our servers.
+                    <p class="mt-4 text-lg text-slate-400">
+                        Can't find the answer you're looking for? Feel free to reach out.
                     </p>
                 </div>
-
-                <div class="bg-gray-50 rounded-lg p-8">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-                        <!-- Your Device -->
-                        <div class="text-center">
-                            <div class="bg-white rounded-lg shadow p-6">
-                                <svg class="w-12 h-12 mx-auto text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                                </svg>
-                                <p class="mt-4 font-medium">Your Device</p>
-                                <p class="text-sm text-gray-500">Phone, laptop, tablet</p>
-                            </div>
+                <div class="mt-12 lg:mt-0 lg:col-span-2">
+                    <dl class="space-y-10">
+                        <div>
+                            <dt class="text-lg font-semibold text-white">
+                                Is HARelay really free?
+                            </dt>
+                            <dd class="mt-3 text-slate-400">
+                                Yes! HARelay is completely free to use. We built this for the Home Assistant community and want everyone to have secure remote access without barriers.
+                            </dd>
                         </div>
-
-                        <!-- HARelay Server -->
-                        <div class="text-center">
-                            <div class="flex items-center justify-center mb-4">
-                                <div class="h-px bg-blue-300 w-full"></div>
-                                <span class="px-2 text-sm text-blue-600">HTTPS</span>
-                                <div class="h-px bg-blue-300 w-full"></div>
-                            </div>
-                            <div class="bg-blue-600 rounded-lg shadow p-6 text-white">
-                                <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
-                                </svg>
-                                <p class="mt-4 font-medium">HARelay</p>
-                                <p class="text-sm text-blue-200">Secure tunnel server</p>
-                            </div>
-                            <div class="flex items-center justify-center mt-4">
-                                <div class="h-px bg-green-300 w-full"></div>
-                                <span class="px-2 text-sm text-green-600">WebSocket</span>
-                                <div class="h-px bg-green-300 w-full"></div>
-                            </div>
+                        <div>
+                            <dt class="text-lg font-semibold text-white">
+                                Do I need to open any ports on my router?
+                            </dt>
+                            <dd class="mt-3 text-slate-400">
+                                No. HARelay uses outbound WebSocket connections, so your Home Assistant stays behind your firewall with no ports exposed. This is actually more secure than traditional port forwarding.
+                            </dd>
                         </div>
-
-                        <!-- Home Assistant -->
-                        <div class="text-center">
-                            <div class="bg-white rounded-lg shadow p-6">
-                                <svg class="w-12 h-12 mx-auto text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                                </svg>
-                                <p class="mt-4 font-medium">Home Assistant</p>
-                                <p class="text-sm text-gray-500">Your smart home</p>
-                            </div>
+                        <div>
+                            <dt class="text-lg font-semibold text-white">
+                                Is my data secure?
+                            </dt>
+                            <dd class="mt-3 text-slate-400">
+                                Absolutely. All connections are encrypted using TLS, and we never store your Home Assistant credentials. The tunnel only forwards traffic - we can't see your data.
+                            </dd>
                         </div>
-                    </div>
+                        <div>
+                            <dt class="text-lg font-semibold text-white">
+                                What about performance?
+                            </dt>
+                            <dd class="mt-3 text-slate-400">
+                                HARelay uses WebSocket connections for low latency. Most users don't notice any difference compared to a direct local connection. Real-time features like live dashboards work seamlessly.
+                            </dd>
+                        </div>
+                    </dl>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- CTA -->
-        <div class="bg-blue-600">
-            <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">
-                <h2 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                    <span class="block">Ready to connect?</span>
-                    <span class="block text-blue-200">Get started in under 5 minutes.</span>
+    <!-- CTA -->
+    <div class="py-24">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-cyan-500 rounded-2xl p-8 md:p-12 text-center">
+                <h2 class="text-3xl sm:text-4xl font-bold text-slate-900">
+                    Ready to connect?
                 </h2>
-                <div class="mt-8 flex lg:mt-0 lg:flex-shrink-0">
-                    <div class="inline-flex rounded-md shadow">
-                        <a href="{{ route('register') }}" class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50">
-                            Get Started Free
-                        </a>
-                    </div>
+                <p class="mt-4 text-lg text-slate-700 max-w-2xl mx-auto">
+                    Get started in under 5 minutes. No credit card required.
+                </p>
+                <div class="mt-8">
+                    <a href="{{ route('register') }}" class="inline-flex items-center justify-center px-8 py-4 bg-slate-900 hover:bg-slate-800 border border-transparent rounded-xl font-semibold text-white transition text-lg">
+                        Get Started Free
+                        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                        </svg>
+                    </a>
                 </div>
             </div>
         </div>
