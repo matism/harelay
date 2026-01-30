@@ -18,17 +18,36 @@
                             <!-- Subdomain -->
                             <div>
                                 <label class="block text-sm font-medium text-slate-300 mb-2">Your Subdomain</label>
-                                <div class="flex items-center">
-                                    <input type="text" readonly value="{{ $connection->subdomain }}.{{ config('app.proxy_domain') }}"
-                                        class="flex-1 rounded-lg border-0 bg-white/5 text-white placeholder-slate-400 shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-cyan-400 sm:text-sm px-4 py-3">
-                                    <button onclick="navigator.clipboard.writeText('{{ $connection->subdomain }}.{{ config('app.proxy_domain') }}')"
-                                        class="ml-3 inline-flex items-center px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-sm font-medium text-white transition">
-                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                                        </svg>
-                                        Copy
-                                    </button>
-                                </div>
+                                @if(auth()->user()->can_set_subdomain)
+                                    <form action="{{ route('connection.update-subdomain') }}" method="POST" class="flex items-center">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="text" name="subdomain" value="{{ $connection->subdomain }}"
+                                            pattern="[a-z0-9-]+" minlength="3" maxlength="32"
+                                            class="flex-1 rounded-lg border-0 bg-white/5 text-white placeholder-slate-400 shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-cyan-400 sm:text-sm px-4 py-3">
+                                        <span class="mx-2 text-slate-400">.{{ config('app.proxy_domain') }}</span>
+                                        <button type="submit"
+                                            class="inline-flex items-center px-4 py-3 bg-cyan-500 hover:bg-cyan-400 border border-transparent rounded-lg text-sm font-medium text-slate-900 transition">
+                                            Save
+                                        </button>
+                                    </form>
+                                    @error('subdomain')
+                                        <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                    @enderror
+                                    <p class="mt-2 text-xs text-slate-500">You can set a custom subdomain (lowercase letters, numbers, and hyphens only).</p>
+                                @else
+                                    <div class="flex items-center">
+                                        <input type="text" readonly value="{{ $connection->subdomain }}.{{ config('app.proxy_domain') }}"
+                                            class="flex-1 rounded-lg border-0 bg-white/5 text-white placeholder-slate-400 shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-cyan-400 sm:text-sm px-4 py-3">
+                                        <button onclick="navigator.clipboard.writeText('{{ $connection->subdomain }}.{{ config('app.proxy_domain') }}')"
+                                            class="ml-3 inline-flex items-center px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-sm font-medium text-white transition">
+                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                            </svg>
+                                            Copy
+                                        </button>
+                                    </div>
+                                @endif
                             </div>
 
                             <!-- Full URL -->

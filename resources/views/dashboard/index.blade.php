@@ -170,4 +170,24 @@
             @endif
         </div>
     </div>
+
+    @if($connection && !$connection->isConnected())
+    <script>
+        (function() {
+            let checkInterval = setInterval(function() {
+                fetch('/api/connection/status', {
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.connected) {
+                        clearInterval(checkInterval);
+                        window.location.reload();
+                    }
+                })
+                .catch(() => {});
+            }, 3000);
+        })();
+    </script>
+    @endif
 </x-app-layout>

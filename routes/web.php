@@ -29,6 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Connection management
     Route::post('/connection', [ConnectionController::class, 'store'])->name('connection.store');
     Route::post('/connection/regenerate-token', [ConnectionController::class, 'regenerateToken'])->name('connection.regenerate-token');
+    Route::patch('/connection/subdomain', [ConnectionController::class, 'updateSubdomain'])->name('connection.update-subdomain');
     Route::delete('/connection', [ConnectionController::class, 'destroy'])->name('connection.destroy');
 
     // Profile (from Breeze)

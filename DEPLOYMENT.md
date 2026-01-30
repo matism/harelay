@@ -550,15 +550,41 @@ nc -zv harelay.com 8081
 
 ### Deploying Updates
 
+Use the included deploy script for easy updates:
+
+```bash
+cd /var/www/harelay
+sudo ./deploy.sh
+```
+
+The deploy script handles:
+- Git safe directory configuration (fixes "dubious ownership" errors)
+- Maintenance mode (shows users a "down for maintenance" page)
+- Git pull with proper ownership
+- Composer and npm dependency installation
+- Database migrations
+- Cache clearing and rebuilding
+- Service restarts (tunnel, queue, PHP-FPM)
+- Permission fixes
+
+**Manual deployment** (if you prefer not to use the script):
+
 ```bash
 cd /var/www/harelay
 
+# Fix git safe directory issue
+sudo git config --global --add safe.directory /var/www/harelay
+
 # Pull latest changes
-git pull origin main
+sudo git fetch origin main
+sudo git reset --hard origin/main
+
+# Fix ownership
+sudo chown -R www-data:www-data /var/www/harelay
 
 # Install dependencies
-composer install --no-dev --optimize-autoloader
-npm ci && npm run build
+sudo -u www-data composer install --no-dev --optimize-autoloader
+sudo -u www-data npm ci && sudo -u www-data npm run build
 
 # Run migrations
 sudo -u www-data php artisan migrate --force

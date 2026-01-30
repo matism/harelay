@@ -162,13 +162,19 @@ class ProxyController extends Controller
         $host = request()->getHost();
         $scheme = request()->secure() ? 'wss' : 'ws';
 
-        // In production: use path-based WebSocket (e.g., wss://subdomain.harelay.com/wss)
-        // In development: use separate port (e.g., ws://subdomain.harelay.test:8082)
-        $wsProxyPath = env('WS_PROXY_PATH');
-        if ($wsProxyPath) {
+        // In production (HTTPS): use path-based WebSocket (e.g., wss://subdomain.harelay.com/wss)
+        // In development (HTTP with port): use separate port (e.g., ws://subdomain.harelay.test:8082)
+        $wsProxyPath = config('app.ws_proxy_path');
+        $wsProxyPort = (int) config('app.ws_proxy_port', 8082);
+
+        // If HTTPS and no explicit port config, always use /wss path
+        if (request()->secure() && $wsProxyPath) {
             $wsUrl = "{$scheme}://{$host}{$wsProxyPath}";
+        } elseif (request()->secure()) {
+            // Default to /wss for HTTPS even if not configured
+            $wsUrl = "{$scheme}://{$host}/wss";
         } else {
-            $wsProxyPort = (int) (env('WS_PROXY_PORT', 8082));
+            // Development: use separate port
             $wsUrl = "{$scheme}://{$host}:{$wsProxyPort}";
         }
 

@@ -22,6 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'can_set_subdomain',
     ];
 
     /**

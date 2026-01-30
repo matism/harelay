@@ -64,6 +64,8 @@ return [
     |
     | proxy_port: The port for development (null for production/standard ports)
     | proxy_secure: Whether to use HTTPS for proxy URLs
+    | ws_proxy_port: The port for WebSocket proxy (development)
+    | ws_proxy_path: The path for WebSocket proxy (production via Nginx)
     |
     */
 
@@ -72,6 +74,8 @@ return [
     'proxy_secure' => env('APP_PROXY_SECURE') !== null
         ? filter_var(env('APP_PROXY_SECURE'), FILTER_VALIDATE_BOOLEAN)
         : (env('APP_ENV') !== 'local'),  // Default: false in local, true in production
+    'ws_proxy_port' => env('WS_PROXY_PORT', 8082),
+    'ws_proxy_path' => env('WS_PROXY_PATH', '/wss'),
 
     /*
     |--------------------------------------------------------------------------
