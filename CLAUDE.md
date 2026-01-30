@@ -10,13 +10,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Marketing Site**: Landing page, pricing, how-it-works
 - **User Dashboard**: Connection management, setup guide, settings
-- **Tunnel Server**: Laravel Reverb WebSocket + HTTP API for add-on communication
+- **Tunnel Server**: Workerman-based WebSocket server (`tunnel-server.php`)
 - **Proxy System**: Routes subdomain requests through WebSocket tunnel to Home Assistant
 
 ## Common Commands
 
 ```bash
-# Development (runs server, queue, logs, vite, and reverb in parallel)
+# Development (runs server, queue, logs, vite, and tunnel server in parallel)
 composer dev
 
 # Setup new environment
@@ -34,95 +34,127 @@ php artisan test --filter=TestName
 # Database migrations
 php artisan migrate
 
-# Create migration
-php artisan make:migration create_table_name
-
-# Create model with migration, factory, and controller
-php artisan make:model ModelName -mfc
-
-# Start only the Reverb WebSocket server
-php artisan reverb:start
+# Start tunnel server manually (usually run via composer dev)
+php tunnel-server.php start
 
 # Clear all caches
 php artisan optimize:clear
+
+# Create test user and connection for local testing
+php artisan tunnel:create-test
 ```
 
 ## Architecture
 
 - **Framework**: Laravel 12 with Vite and Tailwind CSS 4
 - **Authentication**: Laravel Breeze (Blade)
-- **WebSocket**: Laravel Reverb (Pusher-compatible)
+- **Tunnel Server**: Workerman WebSocket (ports 8081 + 8082)
 - **Database**: MySQL (production), SQLite (development/testing)
 - **Queue**: Database driver
-- **Cache/Session**: Database driver
-- **Broadcasting**: Reverb
+- **Cache/Session**: Database driver (file cache for tunnel IPC)
 
 ### Database Tables
 
 - `users` - User accounts (Breeze)
-- `ha_connections` - User's HA connection (subdomain, token, status)
+- `ha_connections` - User's HA connection (subdomain, token, status, last_connected_at)
 - `subscriptions` - User subscription plans
 
 ### Directory Structure
 
 ```
 app/
-├── Events/                    # Tunnel events (TunnelRequest, TunnelConnected, etc.)
 ├── Http/
 │   ├── Controllers/
-│   │   ├── Api/               # Tunnel API for HA add-on
 │   │   ├── DashboardController.php
 │   │   ├── ConnectionController.php
-│   │   ├── ProxyController.php    # Handles subdomain proxying
+│   │   ├── ProxyController.php        # Handles subdomain HTTP proxying
 │   │   └── MarketingController.php
 │   └── Middleware/
-│       ├── ProxyMiddleware.php    # Subdomain detection
+│       ├── SubdomainProxy.php         # Subdomain detection (local dev)
+│       ├── ProxySecurityHeaders.php   # Security headers for proxied responses
 │       └── CheckSubscription.php
 ├── Models/
 │   ├── User.php
 │   ├── HaConnection.php
 │   └── Subscription.php
-└── Services/
-    └── TunnelManager.php      # Orchestrates tunnel communication
+├── Services/
+│   └── TunnelManager.php              # File-cache IPC with tunnel server
+└── Console/Commands/
+    └── CreateTestConnection.php       # Creates test user/connection
+
+tunnel-server.php                      # Workerman WebSocket tunnel server
 
 routes/
-├── api.php                    # Tunnel API routes (/api/tunnel/*)
-├── channels.php               # WebSocket channel auth
-└── web.php                    # Web + subdomain proxy routes
+├── web.php                            # Web routes
+├── api.php                            # Reserved for future API
+└── channels.php                       # Broadcast channel auth
 
 resources/views/
-├── dashboard/                 # User dashboard views
-├── marketing/                 # Public marketing pages
-├── errors/                    # Tunnel error pages
-└── components/                # Blade components
+├── dashboard/                         # User dashboard views
+├── marketing/                         # Public marketing pages
+├── errors/                            # Tunnel error pages (auth-required, disconnected, timeout)
+└── components/                        # Blade components
 ```
 
 ## Tunnel System
 
-### Request Flow
+### Architecture
+
+The tunnel uses a Workerman-based WebSocket server that runs alongside Laravel:
+
+- **Port 8081**: Add-on connections (authentication, HTTP request/response relay)
+- **Port 8082**: Browser WebSocket proxy (for Home Assistant real-time features)
+
+Communication between Laravel web requests and the tunnel server uses file-based cache (`Cache::store('file')`) to avoid database connection issues in long-running processes.
+
+### Request Flow (HTTP)
 
 1. User visits `subdomain.harelay.com/path`
-2. `ProxyController` receives request
-3. `TunnelManager::proxyRequest()` broadcasts `TunnelRequest` event via Reverb
-4. HA add-on receives event on `private-tunnel.{subdomain}` channel
-5. Add-on makes request to local HA and POSTs response to `/api/tunnel/response`
-6. `TunnelManager` retrieves response from cache and returns to user
+2. `SubdomainProxy` middleware detects subdomain, calls `ProxyController`
+3. `ProxyController` verifies auth and ownership
+4. `TunnelManager::proxyRequest()` stores request in file cache
+5. `tunnel-server.php` polls cache, sends request to add-on via WebSocket
+6. Add-on forwards to Home Assistant, returns response via WebSocket
+7. `tunnel-server.php` stores response in file cache
+8. `TunnelManager` retrieves response and returns to user
 
-### API Endpoints (for HA Add-on)
+### Request Flow (WebSocket)
 
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /api/tunnel/connect` | Register add-on connection |
-| `POST /api/tunnel/disconnect` | Unregister connection |
-| `POST /api/tunnel/heartbeat` | Keep-alive (every 30-60s) |
-| `POST /api/tunnel/auth` | WebSocket channel authentication |
-| `POST /api/tunnel/response` | Submit proxied response |
-| `POST /api/tunnel/poll` | Polling fallback for requests |
+1. Browser loads HA page with injected WebSocket proxy script
+2. Script intercepts `new WebSocket()` calls to `/api/websocket`
+3. Browser connects to port 8082 with subdomain authentication
+4. `tunnel-server.php` tells add-on to open WebSocket to HA
+5. Messages are relayed bidirectionally through the tunnel
 
-### WebSocket Events
+### Add-on Protocol
 
-- **Channel**: `private-tunnel.{subdomain}`
-- **Event**: `tunnel.request` - Contains request_id, method, uri, headers, body
+The HA add-on (`../harelay-addon/`) connects via WebSocket to port 8081:
+
+**Authentication:**
+```json
+{"type": "auth", "subdomain": "abc123", "token": "secret"}
+→ {"type": "auth_result", "success": true, "subdomain": "abc123"}
+```
+
+**HTTP Request/Response:**
+```json
+← {"type": "request", "request_id": "uuid", "method": "GET", "uri": "/", "headers": {}, "body": null}
+→ {"type": "response", "request_id": "uuid", "status_code": 200, "headers": {}, "body": "base64..."}
+```
+
+**WebSocket Proxy:**
+```json
+← {"type": "ws_open", "stream_id": "id", "path": "/api/websocket"}
+← {"type": "ws_message", "stream_id": "id", "message": "..."}
+→ {"type": "ws_message", "stream_id": "id", "message": "..."}
+← {"type": "ws_close", "stream_id": "id"}
+```
+
+**Heartbeat:**
+```json
+→ {"type": "heartbeat"}
+← {"type": "pong"}
+```
 
 ## Testing
 
@@ -135,11 +167,16 @@ Tests use in-memory SQLite. Run with `composer test` or `php artisan test`.
 php artisan tunnel:create-test
 # Output: test@example.com / password, subdomain, and token
 
-# 2. Run the tunnel simulator (simulates HA add-on)
-php artisan tunnel:simulate {subdomain} "{token}" --ha-url=http://localhost:8123
+# 2. Start the development servers
+composer dev
 
-# 3. Add to /etc/hosts: 127.0.0.1 {subdomain}.harelay.com
-# 4. Visit http://{subdomain}.harelay.com:8000 and log in
+# 3. Configure the HA add-on with subdomain and token
+# See ../harelay-addon/ for add-on setup
+
+# 4. Add to /etc/hosts (for local subdomain routing):
+#    127.0.0.1 {subdomain}.harelay.test
+
+# 5. Visit https://{subdomain}.harelay.test and log in
 ```
 
 ### Testing with Valet
@@ -152,27 +189,33 @@ valet link harelay --secure
 APP_PROXY_DOMAIN=harelay.test
 APP_URL=https://harelay.test
 SESSION_DOMAIN=.harelay.test
-
-# Run Reverb separately (Valet handles PHP only)
-php artisan reverb:start
 ```
 
 Valet automatically handles wildcard subdomains: `https://{subdomain}.harelay.test`
 
 ### HA Add-on
 
-The Home Assistant add-on is in a separate repository at `../harelay-addon/`. See that project's README for development and deployment instructions.
+The Home Assistant add-on is in a separate repository at `../harelay-addon/`. It's a Python WebSocket client that:
+- Connects to the tunnel server on port 8081
+- Authenticates with subdomain and token
+- Proxies HTTP requests to local Home Assistant
+- Proxies WebSocket connections for real-time features
 
 ## Environment Variables
 
 Key variables to configure:
 
 ```env
+# Application
 APP_PROXY_DOMAIN=harelay.com          # Domain for subdomains
-BROADCAST_CONNECTION=reverb           # Use Reverb for WebSocket
-REVERB_HOST=localhost                 # WebSocket server host
-REVERB_PORT=8080                      # WebSocket server port
-REVERB_SCHEME=http                    # http or https
+APP_URL=https://harelay.com
+SESSION_DOMAIN=.harelay.com           # Important for subdomain cookies
+
+# Tunnel Server (Workerman)
+TUNNEL_HOST=0.0.0.0                   # Bind address
+TUNNEL_PORT=8081                      # Add-on connection port
+WS_PROXY_PORT=8082                    # Browser WebSocket proxy port
+TUNNEL_DEBUG=false                    # Enable verbose logging
 ```
 
 ## Security Notes
@@ -181,9 +224,10 @@ REVERB_SCHEME=http                    # http or https
 - Tokens shown only once to user (on create/regenerate)
 - Users must be authenticated to access their subdomain
 - Owner verification on all proxy requests
-- Subdomain routes include anti-crawling headers (X-Robots-Tag, X-Frame-Options)
-- Rate limiting on API endpoints (60 requests/minute)
-- Security headers on proxy responses (CSP, X-Content-Type-Options)
+- Subdomain sanitization: `preg_replace('/[^a-z0-9]/', '', $subdomain)`
+- WebSocket path validation: only `/api/websocket` and `/api/hassio` allowed
+- Stream IDs use cryptographically secure random bytes
+- Security headers on proxy responses (X-Robots-Tag, X-Frame-Options)
 
 ## Working Guidelines
 

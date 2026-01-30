@@ -2,116 +2,44 @@
 
 namespace App\Services;
 
-use App\Events\TunnelConnected;
-use App\Events\TunnelDisconnected;
-use App\Events\TunnelRequest;
 use App\Models\HaConnection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
+/**
+ * Manages tunnel connections and proxied requests.
+ *
+ * Uses file cache for communication with the tunnel server process
+ * to avoid database connection issues in long-running processes.
+ */
 class TunnelManager
 {
     private const CACHE_PREFIX = 'tunnel:';
 
-    private const CONNECTION_TTL = 120; // seconds - connection considered stale after this
+    private const CONNECTION_TTL = 120; // seconds
 
-    private const REQUEST_TTL = 30; // seconds - request timeout
+    private const REQUEST_TTL = 30; // seconds
 
-    private const RESPONSE_TTL = 30; // seconds - response kept in cache
-
-    public function authenticate(string $subdomain, string $token): ?HaConnection
-    {
-        $connection = HaConnection::where('subdomain', $subdomain)->first();
-
-        if (! $connection) {
-            return null;
-        }
-
-        if (! Hash::check($token, $connection->connection_token)) {
-            return null;
-        }
-
-        return $connection;
-    }
-
-    public function connect(HaConnection $connection, ?string $socketId = null): void
-    {
-        $connection->update([
-            'status' => 'connected',
-            'last_connected_at' => now(),
-        ]);
-
-        Cache::put(
-            $this->getConnectionCacheKey($connection->subdomain),
-            [
-                'socket_id' => $socketId,
-                'connected_at' => now()->toIso8601String(),
-            ],
-            self::CONNECTION_TTL
-        );
-
-        event(new TunnelConnected($connection));
-    }
-
-    public function disconnect(HaConnection $connection): void
-    {
-        $connection->update([
-            'status' => 'disconnected',
-        ]);
-
-        Cache::forget($this->getConnectionCacheKey($connection->subdomain));
-
-        event(new TunnelDisconnected($connection));
-    }
-
+    /**
+     * Check if a tunnel connection is active.
+     */
     public function isConnected(string $subdomain): bool
     {
-        // Check if connection exists in cache (refreshed by heartbeat)
-        if (! Cache::has($this->getConnectionCacheKey($subdomain))) {
-            return false;
-        }
-
-        // Also verify the database status
         $connection = HaConnection::where('subdomain', $subdomain)->first();
+
         if (! $connection || $connection->status !== 'connected') {
             return false;
         }
 
-        // Check if last_connected_at is within the TTL
-        if ($connection->last_connected_at && $connection->last_connected_at->diffInSeconds(now()) > self::CONNECTION_TTL) {
-            // Connection is stale, mark as disconnected
+        // Check if last_connected_at is within the TTL (heartbeats update this)
+        if ($connection->last_connected_at &&
+            $connection->last_connected_at->diffInSeconds(now()) > self::CONNECTION_TTL) {
             $connection->update(['status' => 'disconnected']);
-            Cache::forget($this->getConnectionCacheKey($subdomain));
 
             return false;
         }
 
         return true;
-    }
-
-    public function getSocketId(string $subdomain): ?string
-    {
-        $data = Cache::get($this->getConnectionCacheKey($subdomain));
-
-        return $data['socket_id'] ?? null;
-    }
-
-    public function heartbeat(HaConnection $connection): void
-    {
-        $connection->update([
-            'status' => 'connected',
-            'last_connected_at' => now(),
-        ]);
-
-        $data = Cache::get($this->getConnectionCacheKey($connection->subdomain));
-        if ($data) {
-            Cache::put(
-                $this->getConnectionCacheKey($connection->subdomain),
-                $data,
-                self::CONNECTION_TTL
-            );
-        }
     }
 
     /**
@@ -128,51 +56,30 @@ class TunnelManager
     ): ?array {
         $requestId = Str::uuid()->toString();
 
-        \Log::debug('ProxyRequest starting', [
-            'subdomain' => $subdomain,
-            'request_id' => $requestId,
-            'method' => $method,
-            'uri' => $uri,
-        ]);
-
-        // Store the request in pending cache
+        // Store request in file cache (base64 encode body for safe JSON transport)
         $pendingKey = $this->getPendingCacheKey($subdomain);
-        $pendingRequests = Cache::get($pendingKey, []);
+        $pendingRequests = Cache::store('file')->get($pendingKey, []);
         $pendingRequests[$requestId] = [
             'method' => $method,
             'uri' => $uri,
             'headers' => $headers,
-            'body' => $body,
+            'body' => $body ? base64_encode($body) : null,
+            'body_encoded' => true,
             'created_at' => now()->toIso8601String(),
         ];
-        Cache::put($pendingKey, $pendingRequests, self::REQUEST_TTL);
+        Cache::store('file')->put($pendingKey, $pendingRequests, self::REQUEST_TTL);
 
-        \Log::debug('Request stored in pending cache', [
-            'pending_key' => $pendingKey,
-            'total_pending' => count($pendingRequests),
-        ]);
-
-        // Broadcast the request to the add-on via Reverb
-        broadcast(new TunnelRequest(
-            subdomain: $subdomain,
-            requestId: $requestId,
-            method: $method,
-            uri: $uri,
-            headers: $headers,
-            body: $body,
-        ));
-
-        // Wait for response (polling with exponential backoff)
+        // Wait for response with exponential backoff
         $responseKey = $this->getResponseCacheKey($requestId);
-        $maxWait = self::REQUEST_TTL;
+        $maxWaitMicroseconds = self::REQUEST_TTL * 1000000;
         $waited = 0;
-        $interval = 50000; // Start with 50ms
+        $interval = 50000; // Start at 50ms
 
-        while ($waited < $maxWait * 1000000) {
-            $response = Cache::get($responseKey);
+        while ($waited < $maxWaitMicroseconds) {
+            $response = Cache::store('file')->get($responseKey);
+
             if ($response !== null) {
-                // Clean up
-                Cache::forget($responseKey);
+                Cache::store('file')->forget($responseKey);
                 $this->removePendingRequest($subdomain, $requestId);
 
                 return $response;
@@ -180,55 +87,34 @@ class TunnelManager
 
             usleep($interval);
             $waited += $interval;
-
-            // Increase interval up to 200ms
-            $interval = min($interval * 1.5, 200000);
+            $interval = min((int) ($interval * 1.5), 200000); // Cap at 200ms
         }
 
-        // Timeout - clean up pending request
+        // Timeout - clean up
         $this->removePendingRequest($subdomain, $requestId);
 
         return null;
     }
 
     /**
-     * Store a response from the add-on.
-     */
-    public function storeResponse(string $requestId, int $statusCode, array $headers, string $body): void
-    {
-        $responseKey = $this->getResponseCacheKey($requestId);
-        Cache::put($responseKey, [
-            'status_code' => $statusCode,
-            'headers' => $headers,
-            'body' => $body,
-            'received_at' => now()->toIso8601String(),
-        ], self::RESPONSE_TTL);
-    }
-
-    /**
-     * Get pending requests for a subdomain (for polling fallback).
+     * Get pending requests for a subdomain.
      */
     public function getPendingRequests(string $subdomain): array
     {
-        return Cache::get($this->getPendingCacheKey($subdomain), []);
+        return Cache::store('file')->get($this->getPendingCacheKey($subdomain), []);
     }
 
     private function removePendingRequest(string $subdomain, string $requestId): void
     {
         $pendingKey = $this->getPendingCacheKey($subdomain);
-        $pendingRequests = Cache::get($pendingKey, []);
+        $pendingRequests = Cache::store('file')->get($pendingKey, []);
         unset($pendingRequests[$requestId]);
 
         if (empty($pendingRequests)) {
-            Cache::forget($pendingKey);
+            Cache::store('file')->forget($pendingKey);
         } else {
-            Cache::put($pendingKey, $pendingRequests, self::REQUEST_TTL);
+            Cache::store('file')->put($pendingKey, $pendingRequests, self::REQUEST_TTL);
         }
-    }
-
-    private function getConnectionCacheKey(string $subdomain): string
-    {
-        return self::CACHE_PREFIX.'connection:'.$subdomain;
     }
 
     private function getPendingCacheKey(string $subdomain): string

@@ -7,18 +7,14 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-// Tunnel channel for HA add-ons
-// Note: Authentication for this channel is handled via custom TunnelAuthController
-// because add-ons authenticate with connection tokens, not user sessions
+// Note: Tunnel communication uses WebSocket via tunnel-server.php
+// This channel is reserved for future dashboard real-time features
 Broadcast::channel('tunnel.{subdomain}', function ($user, $subdomain) {
-    // For browser clients (dashboard), check if user owns this connection
-    if ($user) {
-        $connection = HaConnection::where('subdomain', $subdomain)
-            ->where('user_id', $user->id)
-            ->first();
-
-        return $connection !== null;
+    if (! $user) {
+        return false;
     }
 
-    return false;
+    return HaConnection::where('subdomain', $subdomain)
+        ->where('user_id', $user->id)
+        ->exists();
 });

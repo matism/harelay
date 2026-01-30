@@ -21,7 +21,6 @@ return Application::configure(basePath: dirname(__DIR__))
         }
 
         $middleware->alias([
-            'proxy' => \App\Http\Middleware\ProxyMiddleware::class,
             'proxy.security' => \App\Http\Middleware\ProxySecurityHeaders::class,
             'subscription' => \App\Http\Middleware\CheckSubscription::class,
         ]);
