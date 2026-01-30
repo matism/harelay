@@ -79,6 +79,25 @@
                                     @endif
                                 </div>
                             </div>
+
+                            <!-- Data Transfer Stats -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Data Transfer</label>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="bg-white/5 rounded-lg p-3 text-center">
+                                        <p class="text-xs text-slate-400 mb-1">Downloaded</p>
+                                        <p class="text-white font-medium">{{ $connection->getFormattedBytesOut() }}</p>
+                                    </div>
+                                    <div class="bg-white/5 rounded-lg p-3 text-center">
+                                        <p class="text-xs text-slate-400 mb-1">Uploaded</p>
+                                        <p class="text-white font-medium">{{ $connection->getFormattedBytesIn() }}</p>
+                                    </div>
+                                    <div class="bg-white/5 rounded-lg p-3 text-center">
+                                        <p class="text-xs text-slate-400 mb-1">Total</p>
+                                        <p class="text-white font-medium">{{ $connection->getFormattedTotalBytes() }}</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -17,6 +17,8 @@ class HaConnection extends Model
         'connection_token',
         'status',
         'last_connected_at',
+        'bytes_in',
+        'bytes_out',
     ];
 
     protected function casts(): array
@@ -65,5 +67,55 @@ class HaConnection extends Model
     public static function generateConnectionToken(): string
     {
         return Str::random(64);
+    }
+
+    /**
+     * Get total bytes transferred (in + out).
+     */
+    public function getTotalBytes(): int
+    {
+        return $this->bytes_in + $this->bytes_out;
+    }
+
+    /**
+     * Format bytes as human-readable string (KB, MB, GB).
+     */
+    public static function formatBytes(int $bytes): string
+    {
+        if ($bytes >= 1073741824) {
+            return number_format($bytes / 1073741824, 2).' GB';
+        }
+        if ($bytes >= 1048576) {
+            return number_format($bytes / 1048576, 2).' MB';
+        }
+        if ($bytes >= 1024) {
+            return number_format($bytes / 1024, 2).' KB';
+        }
+
+        return $bytes.' B';
+    }
+
+    /**
+     * Get formatted bytes in.
+     */
+    public function getFormattedBytesIn(): string
+    {
+        return self::formatBytes($this->bytes_in);
+    }
+
+    /**
+     * Get formatted bytes out.
+     */
+    public function getFormattedBytesOut(): string
+    {
+        return self::formatBytes($this->bytes_out);
+    }
+
+    /**
+     * Get formatted total bytes.
+     */
+    public function getFormattedTotalBytes(): string
+    {
+        return self::formatBytes($this->getTotalBytes());
     }
 }

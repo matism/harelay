@@ -25,6 +25,7 @@ $kernel->bootstrap();
 
 use App\Models\HaConnection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Workerman\Connection\TcpConnection;
 use Workerman\Timer;
@@ -47,6 +48,28 @@ function tunnelLog(string $message, bool $debugOnly = false): void
     }
     $timestamp = date('Y-m-d H:i:s');
     echo "[{$timestamp}] {$message}\n";
+}
+
+/**
+ * Track traffic bytes for a subdomain.
+ * Uses atomic increment to handle concurrent updates.
+ */
+function trackTraffic(string $subdomain, int $bytesIn = 0, int $bytesOut = 0): void
+{
+    try {
+        if ($bytesIn > 0) {
+            DB::table('ha_connections')
+                ->where('subdomain', $subdomain)
+                ->increment('bytes_in', $bytesIn);
+        }
+        if ($bytesOut > 0) {
+            DB::table('ha_connections')
+                ->where('subdomain', $subdomain)
+                ->increment('bytes_out', $bytesOut);
+        }
+    } catch (\Exception $e) {
+        tunnelLog("Traffic tracking error: {$e->getMessage()}", true);
+    }
 }
 
 tunnelLog('HARelay Tunnel Server starting');
@@ -145,6 +168,9 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
         // Forward subsequent messages to add-on
         if (isset($addonConnections[$conn->subdomain])) {
+            // Track incoming WebSocket bytes
+            trackTraffic($conn->subdomain, strlen($data), 0);
+
             $addonConnections[$conn->subdomain]->send(json_encode([
                 'type' => 'ws_message',
                 'stream_id' => $conn->streamId,
@@ -190,6 +216,19 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
             foreach ($requests as $requestId => $request) {
                 tunnelLog("HTTP -> {$subdomain}: {$request['method']} {$request['uri']}", true);
+
+                // Track incoming bytes (request body from user)
+                $bodyBytes = 0;
+                if (! empty($request['body'])) {
+                    if ($request['body_encoded'] ?? false) {
+                        $bodyBytes = (int) (strlen($request['body']) * 3 / 4); // Base64 decode estimate
+                    } else {
+                        $bodyBytes = strlen($request['body']);
+                    }
+                }
+                if ($bodyBytes > 0) {
+                    trackTraffic($subdomain, $bodyBytes, 0);
+                }
 
                 $conn->send(json_encode([
                     'type' => 'request',
@@ -289,10 +328,18 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
         $statusCode = (int) ($message['status_code'] ?? 502);
         tunnelLog("HTTP <- {$conn->subdomain}: {$statusCode}", true);
 
+        // Track outgoing bytes (response body to user)
+        $body = $message['body'] ?? '';
+        if (! empty($body)) {
+            // Body is base64 encoded, calculate actual size
+            $bodyBytes = (int) (strlen($body) * 3 / 4);
+            trackTraffic($conn->subdomain, 0, $bodyBytes);
+        }
+
         Cache::store('file')->put("tunnel:response:{$requestId}", [
             'status_code' => $statusCode,
             'headers' => $message['headers'] ?? [],
-            'body' => $message['body'] ?? '',
+            'body' => $body,
             'is_base64' => true,
         ], 30);
 
@@ -322,6 +369,9 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
         $browserConnId = $addonWsStreams[$subdomain][$streamId];
         if (isset($browserWsConnections[$subdomain][$browserConnId])) {
             try {
+                // Track outgoing WebSocket bytes
+                trackTraffic($subdomain, 0, strlen($wsMessage));
+
                 $browserWsConnections[$subdomain][$browserConnId]->send($wsMessage);
             } catch (\Exception $e) {
                 tunnelLog("WS: failed to send to browser for stream {$streamId}: {$e->getMessage()}");
