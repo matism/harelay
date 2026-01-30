@@ -45,6 +45,29 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
+        // Check for explicit redirect URL (from subdomain auth-required page)
+        $redirect = $request->input('redirect');
+        if ($redirect && $this->isValidRedirectUrl($redirect)) {
+            return redirect()->away($redirect);
+        }
+
         return redirect(route('dashboard', absolute: false));
+    }
+
+    /**
+     * Validate that the redirect URL is safe (same domain or subdomain).
+     */
+    private function isValidRedirectUrl(string $url): bool
+    {
+        $parsed = parse_url($url);
+        if (! $parsed || ! isset($parsed['host'])) {
+            return false;
+        }
+
+        $proxyDomain = config('app.proxy_domain', 'harelay.com');
+
+        // Allow main domain and any subdomain
+        return $parsed['host'] === $proxyDomain
+            || str_ends_with($parsed['host'], '.'.$proxyDomain);
     }
 }

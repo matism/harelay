@@ -22,8 +22,17 @@ class SubdomainProxy
 
     public function handle(Request $request, Closure $next): Response
     {
-        $host = $request->getHost();
+        // In production, nginx routes subdomains directly via Route::domain()
+        // This middleware is mainly for local development with php artisan serve
+        // which doesn't support Route::domain() properly
+
+        $host = $request->getHost(); // getHost() returns host without port
         $proxyDomain = config('app.proxy_domain', 'harelay.com');
+
+        // Skip if this is the main domain (no subdomain)
+        if ($host === $proxyDomain || $host === 'www.'.$proxyDomain) {
+            return $next($request);
+        }
 
         // Check if this is a subdomain request (e.g., abc123.harelay.test)
         if (! preg_match('/^([a-z0-9]+)\.'.preg_quote($proxyDomain, '/').'$/i', $host, $matches)) {

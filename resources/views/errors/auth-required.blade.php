@@ -28,14 +28,21 @@
                     </p>
 
                     <div class="mt-6">
-                        <a href="{{ route('login') }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        @php
+                            $mainDomain = config('app.proxy_domain');
+                            $port = config('app.proxy_port');
+                            $scheme = config('app.proxy_secure') ? 'https' : 'http';
+                            $baseUrl = $port ? "{$scheme}://{$mainDomain}:{$port}" : "{$scheme}://{$mainDomain}";
+                            $intendedUrl = request()->fullUrl();
+                        @endphp
+                        <a href="{{ $baseUrl }}/login?redirect={{ urlencode($intendedUrl) }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             Log In
                         </a>
                     </div>
 
                     <p class="mt-4 text-sm text-gray-500">
                         Don't have an account?
-                        <a href="{{ route('register') }}" class="text-blue-600 hover:text-blue-500">
+                        <a href="{{ $baseUrl }}/register?redirect={{ urlencode($intendedUrl) }}" class="text-blue-600 hover:text-blue-500">
                             Sign up
                         </a>
                     </p>

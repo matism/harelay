@@ -69,7 +69,9 @@ return [
 
     'proxy_domain' => env('APP_PROXY_DOMAIN', 'harelay.com'),
     'proxy_port' => env('APP_PROXY_PORT') ? (int) env('APP_PROXY_PORT') : null,
-    'proxy_secure' => (bool) env('APP_PROXY_SECURE', true),
+    'proxy_secure' => env('APP_PROXY_SECURE') !== null
+        ? filter_var(env('APP_PROXY_SECURE'), FILTER_VALIDATE_BOOLEAN)
+        : (env('APP_ENV') !== 'local'),  // Default: false in local, true in production
 
     /*
     |--------------------------------------------------------------------------

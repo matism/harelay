@@ -13,12 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Subdomain proxy detection for local development only
-        // php artisan serve doesn't support Route::domain(), so we need this workaround
-        // In production, nginx/Apache handle subdomain routing properly
-        if (env('APP_ENV') === 'local') {
-            $middleware->prepend(\App\Http\Middleware\SubdomainProxy::class);
-        }
+        // Subdomain proxy detection - runs on all requests to catch subdomains
+        // In production with nginx, Route::domain() handles this instead
+        $middleware->prepend(\App\Http\Middleware\SubdomainProxy::class);
 
         $middleware->alias([
             'proxy.security' => \App\Http\Middleware\ProxySecurityHeaders::class,
