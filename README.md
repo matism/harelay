@@ -41,10 +41,13 @@ HARelay provides a secure tunnel between your Home Assistant instance and the in
 
 ### How It Works
 
-1. **User Registration**: User creates an account on HARelay and receives a unique subdomain and connection token
-2. **Add-on Installation**: User installs the HARelay add-on on Home Assistant and configures it with the connection token
-3. **Tunnel Establishment**: The add-on connects to HARelay via WebSocket (outbound connection, no ports needed)
-4. **Remote Access**: User visits their subdomain, authenticates, and requests are proxied through the tunnel to Home Assistant
+1. **User Registration**: User creates an account on HARelay
+2. **Add-on Installation**: User installs the HARelay add-on on Home Assistant
+3. **Device Pairing**: Add-on displays a pairing code (XXXX-XXXX), user enters it at harelay.com/link to link their account
+4. **Tunnel Establishment**: The add-on connects to HARelay via WebSocket (outbound connection, no ports needed)
+5. **Remote Access**: User visits their subdomain, authenticates, and requests are proxied through the tunnel to Home Assistant
+
+The dashboard auto-refreshes when the connection status changes, showing real-time connection state.
 
 ## Requirements
 
@@ -414,21 +417,25 @@ sudo ufw allow 8081/tcp  # Tunnel server (add-on connections)
 sudo ufw enable
 ```
 
-### Deployment Updates
+### Deployment Updates (Zero-Downtime)
+
+Use the included deploy script for zero-downtime deployments:
 
 ```bash
-cd /var/www/harelay
-git pull origin main
-composer install --no-dev --optimize-autoloader
-npm ci && npm run build
-php artisan migrate --force
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-sudo systemctl restart harelay-tunnel
-sudo systemctl restart harelay-queue
-sudo systemctl reload php8.2-fpm
+sudo /var/www/harelay/current/deploy.sh
 ```
+
+This script:
+- Creates a new release directory
+- Updates code via git
+- Links shared `.env` and `storage`
+- Installs dependencies and builds assets
+- Runs migrations
+- Atomically switches the symlink (zero downtime)
+- Restarts services
+- Keeps last 5 releases for easy rollback
+
+See `DEPLOYMENT.md` for full deployment documentation.
 
 ## Environment Variables
 
@@ -451,10 +458,25 @@ sudo systemctl reload php8.2-fpm
 |--------|------|-------------|
 | id | bigint | Primary key |
 | user_id | bigint | Foreign key to users |
-| subdomain | string | Unique subdomain (e.g., "abc123") |
+| subdomain | string | Unique 16-character subdomain (e.g., "a1b2c3d4e5f6g7h8") |
 | connection_token | string | Hashed authentication token |
 | status | enum | `connected` or `disconnected` |
 | last_connected_at | timestamp | Last heartbeat time |
+| bytes_in | bigint | Total bytes uploaded by user |
+| bytes_out | bigint | Total bytes downloaded by user |
+
+### device_codes
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | bigint | Primary key |
+| device_code | string | Long code for API polling (64 chars) |
+| user_code | string | Short code for user entry (XXXX-XXXX) |
+| user_id | bigint | Foreign key to users (nullable until linked) |
+| subdomain | string | Assigned subdomain (after linking) |
+| connection_token | string | Plain token (temporary, cleared after use) |
+| status | enum | `pending`, `linked`, `expired`, `used` |
+| expires_at | timestamp | Code expiration time (15 minutes) |
 
 ## Security Considerations
 
@@ -465,6 +487,8 @@ sudo systemctl reload php8.2-fpm
 5. **No Port Exposure**: Home Assistant never exposes ports to the internet
 6. **Token Rotation**: Users can regenerate tokens if compromised
 7. **No Crawling**: Subdomain routes include `X-Robots-Tag: noindex` headers
+8. **Long Subdomains**: 16-character subdomains (36^16 combinations) prevent brute-force discovery
+9. **Device Code Expiry**: Pairing codes expire after 15 minutes and are single-use
 
 ## Troubleshooting
 

@@ -52,10 +52,10 @@ php artisan optimize:clear
 
 ### Database Tables
 
-- `users` - User accounts (Breeze)
-- `ha_connections` - User's HA connection (subdomain, token, status, last_connected_at)
+- `users` - User accounts (Breeze), includes `can_set_subdomain` flag for custom subdomain permission
+- `ha_connections` - User's HA connection (subdomain, token, status, last_connected_at, bytes_in, bytes_out)
 - `subscriptions` - User subscription plans
-- `device_codes` - Device pairing codes for add-on setup
+- `device_codes` - Device pairing codes for add-on setup (expires after 15 minutes)
 
 ### Directory Structure
 
@@ -64,7 +64,7 @@ app/
 ├── Http/
 │   ├── Controllers/
 │   │   ├── DashboardController.php    # Dashboard + subscription views
-│   │   ├── ConnectionController.php   # Create/delete/regenerate token
+│   │   ├── ConnectionController.php   # Create/delete/regenerate token/update subdomain
 │   │   ├── ProxyController.php        # HTTP proxying + WS script injection
 │   │   ├── MarketingController.php    # Public pages
 │   │   ├── DeviceLinkController.php   # Device code pairing (/link)
@@ -77,7 +77,7 @@ app/
 │       └── CheckSubscription.php
 ├── Models/
 │   ├── User.php
-│   ├── HaConnection.php               # Has getProxyUrl() helper
+│   ├── HaConnection.php               # Has getProxyUrl(), traffic formatting helpers
 │   ├── Subscription.php
 │   └── DeviceCode.php                 # Device pairing codes
 ├── Services/
@@ -89,7 +89,7 @@ tunnel-server.php                      # Workerman WebSocket tunnel server
 
 routes/
 ├── web.php                            # Web routes + subdomain proxy + /link
-├── api.php                            # Device code API endpoints
+├── api.php                            # Device code API + connection status endpoints
 └── auth.php                           # Auth routes (Breeze)
 
 resources/views/
@@ -224,6 +224,7 @@ Users can pair the add-on without manually copying credentials:
 ```
 POST /api/device/code          # Generate device code (returns device_code, user_code)
 GET  /api/device/poll/{code}   # Poll for pairing status (returns credentials when linked)
+GET  /api/connection/status    # Check connection status (for dashboard auto-refresh)
 GET  /link                     # Web UI for entering pairing code
 POST /link                     # Link device to user account (requires auth)
 ```
@@ -264,11 +265,35 @@ TUNNEL_DEBUG=false                    # Enable verbose logging
 - Users must be authenticated to access their subdomain
 - Owner verification on all proxy requests
 - Subdomain sanitization: `preg_replace('/[^a-z0-9]/', '', $subdomain)`
+- Subdomains are 16 characters (36^16 ≈ 7.9 × 10^24 combinations) to prevent brute-force
 - WebSocket path validation: only `/api/websocket` and `/api/hassio` allowed
 - Stream IDs use cryptographically secure random bytes
 - Security headers on proxy responses (X-Robots-Tag, X-Frame-Options)
 - Device codes expire after 15 minutes
 - Plain tokens stored temporarily in device_codes, cleared after first poll
+
+## Data Transfer Tracking
+
+The tunnel server tracks bytes transferred per connection:
+- **bytes_in**: Data uploaded by user (HTTP request bodies, browser→HA WebSocket messages)
+- **bytes_out**: Data downloaded by user (HTTP response bodies, HA→browser WebSocket messages)
+
+Traffic is buffered in memory and flushed to the database every 30 seconds for efficiency. Buffer is also flushed on graceful shutdown.
+
+Helper methods in `HaConnection`:
+- `getFormattedBytesIn()` / `getFormattedBytesOut()` / `getFormattedTotalBytes()` - Human-readable format (KB/MB/GB)
+- `formatBytes(int $bytes)` - Static helper for formatting
+
+## User Permissions
+
+- `can_set_subdomain` (users table): Allows user to set a custom subdomain instead of the auto-generated 16-character one. Set manually in database for specific users.
+
+## Dashboard Features
+
+- **Auto-refresh**: Dashboard polls `/api/connection/status` every 3 seconds when disconnected, auto-refreshes when connected
+- **Loading animation**: Shows spinner with "Waiting for Connection" state while add-on connects
+- **Device link code auto-formatting**: Automatically adds hyphen after 4th character (XXXX-XXXX format)
+- **Data transfer stats**: Settings page shows downloaded/uploaded/total bytes in human-readable format
 
 ## Working Guidelines
 
