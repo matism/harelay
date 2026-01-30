@@ -51,24 +51,66 @@ function tunnelLog(string $message, bool $debugOnly = false): void
 }
 
 /**
- * Track traffic bytes for a subdomain.
- * Uses atomic increment to handle concurrent updates.
+ * Traffic tracking buffer - accumulates bytes and flushes periodically.
+ * Structure: ['subdomain' => ['in' => bytes, 'out' => bytes], ...]
+ */
+$trafficBuffer = [];
+
+/**
+ * Track traffic bytes for a subdomain (buffered).
+ * Accumulates in memory and flushes to database periodically.
  */
 function trackTraffic(string $subdomain, int $bytesIn = 0, int $bytesOut = 0): void
 {
+    global $trafficBuffer;
+
+    if (! isset($trafficBuffer[$subdomain])) {
+        $trafficBuffer[$subdomain] = ['in' => 0, 'out' => 0];
+    }
+
+    $trafficBuffer[$subdomain]['in'] += $bytesIn;
+    $trafficBuffer[$subdomain]['out'] += $bytesOut;
+}
+
+/**
+ * Flush traffic buffer to database.
+ * Reconnects if connection is stale.
+ */
+function flushTrafficBuffer(): void
+{
+    global $trafficBuffer;
+
+    if (empty($trafficBuffer)) {
+        return;
+    }
+
     try {
-        if ($bytesIn > 0) {
-            DB::table('ha_connections')
-                ->where('subdomain', $subdomain)
-                ->increment('bytes_in', $bytesIn);
+        // Reconnect to handle stale connections in long-running process
+        DB::reconnect();
+
+        foreach ($trafficBuffer as $subdomain => $bytes) {
+            if ($bytes['in'] > 0) {
+                DB::table('ha_connections')
+                    ->where('subdomain', $subdomain)
+                    ->increment('bytes_in', $bytes['in']);
+            }
+            if ($bytes['out'] > 0) {
+                DB::table('ha_connections')
+                    ->where('subdomain', $subdomain)
+                    ->increment('bytes_out', $bytes['out']);
+            }
         }
-        if ($bytesOut > 0) {
-            DB::table('ha_connections')
-                ->where('subdomain', $subdomain)
-                ->increment('bytes_out', $bytesOut);
-        }
+
+        $totalIn = array_sum(array_column($trafficBuffer, 'in'));
+        $totalOut = array_sum(array_column($trafficBuffer, 'out'));
+        $count = count($trafficBuffer);
+        tunnelLog("Traffic flushed: {$count} connections, in={$totalIn}, out={$totalOut}", true);
+
+        // Clear buffer after successful flush
+        $trafficBuffer = [];
     } catch (\Exception $e) {
-        tunnelLog("Traffic tracking error: {$e->getMessage()}", true);
+        tunnelLog("Traffic flush error: {$e->getMessage()}");
+        // Keep buffer to retry next time
     }
 }
 
@@ -243,6 +285,13 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
             Cache::store('file')->forget($pendingKey);
         }
+    });
+
+    // ---------------------------------------------------------------------
+    // Traffic Buffer Flush (every 30 seconds)
+    // ---------------------------------------------------------------------
+    Timer::add(30, function () {
+        flushTrafficBuffer();
     });
 };
 
@@ -440,6 +489,12 @@ $tunnelWorker->onClose = function (TcpConnection $conn) use (&$addonConnections,
 
     HaConnection::where('subdomain', $conn->subdomain)
         ->update(['status' => 'disconnected']);
+};
+
+$tunnelWorker->onWorkerStop = function () {
+    tunnelLog('Worker stopping - flushing traffic buffer...');
+    flushTrafficBuffer();
+    tunnelLog('Traffic buffer flushed');
 };
 
 // =============================================================================
