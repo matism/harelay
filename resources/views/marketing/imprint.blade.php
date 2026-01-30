@@ -11,9 +11,9 @@
                 <div class="text-slate-300 space-y-2">
                     <p>HARelay</p>
                     <p>Mathias Placho</p>
-                    <p>Grabenstraße 2</p>
-                    <p>84130 Dingolfing</p>
-                    <p>Germany</p>
+                    <p>Frauengasse 7</p>
+                    <p>8010 Graz</p>
+                    <p>Österreich</p>
                 </div>
             </div>
 
@@ -29,9 +29,9 @@
                 <div class="text-slate-300 space-y-2">
                     <p>According to § 55 Abs. 2 RStV:</p>
                     <p class="mt-2">Mathias Placho</p>
-                    <p>Grabenstraße 2</p>
-                    <p>84130 Dingolfing</p>
-                    <p>Germany</p>
+                    <p>Frauengasse 7</p>
+                    <p>8010 Graz</p>
+                    <p>Österreich</p>
                 </div>
             </div>
 
