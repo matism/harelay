@@ -134,44 +134,56 @@ EXIT;
 
 ## Deploy the Application
 
-### 1. Create application directory
+HARelay uses a **zero-downtime deployment** structure with symlinks:
 
-```bash
-sudo mkdir -p /var/www/harelay
-sudo chown $USER:$USER /var/www/harelay
+```
+/var/www/harelay/
+├── releases/           # Each deployment creates a new directory here
+│   ├── 20240130_120000/
+│   ├── 20240130_130000/
+│   └── 20240130_140000/  (latest)
+├── shared/             # Shared between all releases
+│   ├── .env
+│   └── storage/
+└── current -> releases/20240130_140000/  (symlink to active release)
 ```
 
-### 2. Clone the repository
+### 1. Create directory structure
 
 ```bash
-cd /var/www/harelay
-git clone https://github.com/your-username/harelay.git .
+sudo mkdir -p /var/www/harelay/{releases,shared}
+sudo mkdir -p /var/www/harelay/shared/storage/{app/public,framework/{cache,sessions,views},logs}
+sudo chown -R www-data:www-data /var/www/harelay/shared
 ```
 
-### 3. Install PHP dependencies
+### 2. Set up deploy user SSH key
 
 ```bash
-composer install --no-dev --optimize-autoloader
+# Switch to deploy user
+sudo su - deploy
+
+# Generate SSH key for GitHub
+ssh-keygen -t ed25519 -C "deploy@harelay"
+
+# Show public key - add this to GitHub as a deploy key
+cat ~/.ssh/id_ed25519.pub
+
+# Test connection
+ssh -T git@github.com
 ```
 
-### 4. Install and build frontend assets
+### 3. Initial clone
 
 ```bash
-npm ci
-npm run build
+# As deploy user
+cd /var/www/harelay/releases
+git clone git@github.com:YOUR_USERNAME/harelay.git initial
 ```
 
-### 5. Configure environment
+### 4. Configure environment
 
 ```bash
-cp .env.example .env
-php artisan key:generate
-```
-
-Edit `.env` with your production settings:
-
-```bash
-nano .env
+sudo nano /var/www/harelay/shared/.env
 ```
 
 ```env
@@ -219,25 +231,57 @@ MAIL_FROM_ADDRESS="noreply@harelay.com"
 MAIL_FROM_NAME="${APP_NAME}"
 ```
 
-### 6. Set permissions
+### 5. Link shared files and set up initial release
 
 ```bash
-sudo chown -R www-data:www-data /var/www/harelay
-sudo chmod -R 755 /var/www/harelay
-sudo chmod -R 775 /var/www/harelay/storage
-sudo chmod -R 775 /var/www/harelay/bootstrap/cache
+cd /var/www/harelay/releases/initial
+
+# Remove storage and link to shared
+rm -rf storage
+ln -s /var/www/harelay/shared/storage storage
+
+# Link .env
+rm -f .env
+ln -s /var/www/harelay/shared/.env .env
+
+# Fix symlink ownership
+sudo chown -h www-data:www-data storage .env
+
+# Fix directory ownership
+sudo chown -R www-data:www-data /var/www/harelay/releases/initial
 ```
 
-### 7. Run migrations
+### 6. Install dependencies and build
 
 ```bash
-cd /var/www/harelay
+cd /var/www/harelay/releases/initial
+
+# PHP dependencies
+sudo -u www-data composer install --no-dev --optimize-autoloader
+
+# Node dependencies and build
+sudo -u www-data npm install
+sudo -u www-data npm run build
+```
+
+### 7. Generate app key and run migrations
+
+```bash
+cd /var/www/harelay/releases/initial
+sudo -u www-data php artisan key:generate
 sudo -u www-data php artisan migrate --force
 ```
 
-### 8. Optimize for production
+### 8. Create current symlink
 
 ```bash
+sudo ln -sfn /var/www/harelay/releases/initial /var/www/harelay/current
+```
+
+### 9. Optimize for production
+
+```bash
+cd /var/www/harelay/current
 sudo -u www-data php artisan config:cache
 sudo -u www-data php artisan route:cache
 sudo -u www-data php artisan view:cache
@@ -269,7 +313,7 @@ server {
     listen [::]:443 ssl http2;
     server_name harelay.com *.harelay.com;
 
-    root /var/www/harelay/public;
+    root /var/www/harelay/current/public;
     index index.php;
 
     # SSL certificates (will be configured by Certbot)
@@ -426,9 +470,8 @@ After=network.target mysql.service
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/var/www/harelay
-ExecStart=/usr/bin/php /var/www/harelay/tunnel-server.php start
-ExecStop=/usr/bin/php /var/www/harelay/tunnel-server.php stop
+WorkingDirectory=/var/www/harelay/current
+ExecStart=/usr/bin/php /var/www/harelay/current/tunnel-server.php start
 Restart=always
 RestartSec=5
 StandardOutput=append:/var/log/harelay/tunnel.log
@@ -455,8 +498,8 @@ After=network.target mysql.service
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/var/www/harelay
-ExecStart=/usr/bin/php /var/www/harelay/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+WorkingDirectory=/var/www/harelay/current
+ExecStart=/usr/bin/php /var/www/harelay/current/artisan queue:work --sleep=3 --tries=3 --max-time=3600
 Restart=always
 RestartSec=5
 StandardOutput=append:/var/log/harelay/queue.log
@@ -522,7 +565,7 @@ sudo tail -f /var/log/nginx/harelay.error.log
 ### 2. Create a test user
 
 ```bash
-cd /var/www/harelay
+cd /var/www/harelay/current
 sudo -u www-data php artisan tinker
 ```
 
@@ -548,64 +591,51 @@ nc -zv harelay.com 8081
 
 ## Maintenance
 
-### Deploying Updates
+### Deploying Updates (Zero-Downtime)
 
-Use the included deploy script for easy updates:
+Use the included deploy script for zero-downtime updates:
 
 ```bash
-cd /var/www/harelay
-sudo ./deploy.sh
+sudo /var/www/harelay/current/deploy.sh
 ```
 
 The deploy script handles:
-- Git safe directory configuration (fixes "dubious ownership" errors)
-- Maintenance mode (shows users a "down for maintenance" page)
-- Git pull with proper ownership
-- Composer and npm dependency installation
-- Database migrations
-- Cache clearing and rebuilding
-- Service restarts (tunnel, queue, PHP-FPM)
-- Permission fixes
+- Creates a new release directory
+- Copies from current release (faster than fresh clone)
+- Updates code via git
+- Links shared `.env` and `storage`
+- Installs Composer and npm dependencies
+- Builds frontend assets
+- Runs database migrations
+- Caches configuration
+- **Atomically switches symlink** (zero downtime!)
+- Restarts services (tunnel, queue, PHP-FPM)
+- Cleans up old releases (keeps last 5)
 
-**Manual deployment** (if you prefer not to use the script):
+**Benefits:**
+- Site stays up during entire deployment
+- Instant rollback capability
+- No maintenance mode needed
+
+### Rollback to Previous Release
+
+If something goes wrong, instantly rollback:
 
 ```bash
-cd /var/www/harelay
+# List available releases
+ls -la /var/www/harelay/releases/
 
-# Fix git safe directory issue
-sudo git config --global --add safe.directory /var/www/harelay
-
-# Pull latest changes
-sudo git fetch origin main
-sudo git reset --hard origin/main
-
-# Fix ownership
-sudo chown -R www-data:www-data /var/www/harelay
-
-# Install dependencies
-sudo -u www-data composer install --no-dev --optimize-autoloader
-sudo -u www-data npm ci && sudo -u www-data npm run build
-
-# Run migrations
-sudo -u www-data php artisan migrate --force
-
-# Clear and rebuild caches
-sudo -u www-data php artisan optimize:clear
-sudo -u www-data php artisan config:cache
-sudo -u www-data php artisan route:cache
-sudo -u www-data php artisan view:cache
-
-# Restart services
-sudo systemctl restart harelay-tunnel
-sudo systemctl restart harelay-queue
+# Rollback to a previous release
+sudo ln -sfn /var/www/harelay/releases/PREVIOUS_RELEASE /var/www/harelay/current
 sudo systemctl reload php8.3-fpm
+sudo systemctl restart harelay-queue harelay-tunnel
 ```
 
 ### Viewing Logs
 
 ```bash
-# Application logs
-sudo tail -f /var/www/harelay/storage/logs/laravel.log
+# Application logs (in shared storage)
+sudo tail -f /var/www/harelay/shared/storage/logs/laravel.log
 
 # Tunnel server logs
 sudo tail -f /var/log/harelay/tunnel.log
@@ -640,7 +670,7 @@ sudo nano /etc/logrotate.d/harelay
     endscript
 }
 
-/var/www/harelay/storage/logs/*.log {
+/var/www/harelay/shared/storage/logs/*.log {
     daily
     missingok
     rotate 14
@@ -717,10 +747,11 @@ Add:
 
 **5. Permission errors**
 ```bash
-sudo chown -R www-data:www-data /var/www/harelay
-sudo chmod -R 755 /var/www/harelay
-sudo chmod -R 775 /var/www/harelay/storage
-sudo chmod -R 775 /var/www/harelay/bootstrap/cache
+sudo chown -R www-data:www-data /var/www/harelay/current
+sudo chown -R www-data:www-data /var/www/harelay/shared
+sudo chmod -R 755 /var/www/harelay/current
+sudo chmod -R 775 /var/www/harelay/shared/storage
+sudo chmod -R 775 /var/www/harelay/current/bootstrap/cache
 ```
 
 ---
@@ -864,7 +895,7 @@ Route::get('/health', function () {
 
 In addition to database backups, consider:
 
-1. **Configuration backup:** `/var/www/harelay/.env`
+1. **Configuration backup:** `/var/www/harelay/shared/.env`
 2. **SSL certificates:** `/etc/letsencrypt/`
 3. **Nginx config:** `/etc/nginx/sites-available/harelay`
 
@@ -879,8 +910,8 @@ mkdir -p $BACKUP_DIR/$DATE
 # Database
 mysqldump -u harelay -p'password' harelay | gzip > "$BACKUP_DIR/$DATE/db.sql.gz"
 
-# Environment
-cp /var/www/harelay/.env "$BACKUP_DIR/$DATE/.env"
+# Environment (from shared directory)
+cp /var/www/harelay/shared/.env "$BACKUP_DIR/$DATE/.env"
 
 # Keep 30 days
 find $BACKUP_DIR -maxdepth 1 -type d -mtime +30 -exec rm -rf {} \;
