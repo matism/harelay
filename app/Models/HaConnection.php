@@ -36,6 +36,22 @@ class HaConnection extends Model
         return $this->status === 'connected';
     }
 
+    /**
+     * Get the full proxy URL for this connection.
+     */
+    public function getProxyUrl(): string
+    {
+        $scheme = config('app.proxy_secure') ? 'https' : 'http';
+        $domain = $this->subdomain.'.'.config('app.proxy_domain');
+        $port = config('app.proxy_port');
+
+        if ($port && $port !== 80 && $port !== 443) {
+            return "{$scheme}://{$domain}:{$port}";
+        }
+
+        return "{$scheme}://{$domain}";
+    }
+
     public static function generateSubdomain(): string
     {
         do {

@@ -153,8 +153,8 @@
                                 </p>
                                 @if($connection)
                                     <div class="mt-3">
-                                        <a href="https://{{ $connection->subdomain }}.{{ config('app.proxy_domain') }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-medium">
-                                            https://{{ $connection->subdomain }}.{{ config('app.proxy_domain') }}
+                                        <a href="{{ $connection->getProxyUrl() }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-medium">
+                                            {{ $connection->getProxyUrl() }}
                                         </a>
                                     </div>
                                 @else

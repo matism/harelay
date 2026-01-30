@@ -160,14 +160,23 @@ class ProxyController extends Controller
     private function injectWebSocketProxy(string $html, string $subdomain): string
     {
         $host = request()->getHost();
-        $wsProxyPort = (int) (env('WS_PROXY_PORT', 8082));
         $scheme = request()->secure() ? 'wss' : 'ws';
+
+        // In production: use path-based WebSocket (e.g., wss://subdomain.harelay.com/wss)
+        // In development: use separate port (e.g., ws://subdomain.harelay.test:8082)
+        $wsProxyPath = env('WS_PROXY_PATH');
+        if ($wsProxyPath) {
+            $wsUrl = "{$scheme}://{$host}{$wsProxyPath}";
+        } else {
+            $wsProxyPort = (int) (env('WS_PROXY_PORT', 8082));
+            $wsUrl = "{$scheme}://{$host}:{$wsProxyPort}";
+        }
 
         // Minified, production-ready script
         $script = <<<JS
 <script>
 (function(){
-    var O=window.WebSocket,s='{$subdomain}',u='{$scheme}://{$host}:{$wsProxyPort}';
+    var O=window.WebSocket,s='{$subdomain}',u='{$wsUrl}';
     window.WebSocket=function(a,p){
         var r=new URL(a,location.href);
         if(r.pathname.indexOf('/api/websocket')>-1||r.pathname.indexOf('/api/hassio')>-1){

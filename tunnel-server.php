@@ -138,7 +138,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
                 'type' => 'ws_open',
                 'stream_id' => $conn->streamId,
                 'path' => $path,
-            ]))
+            ]));
 
             return;
         }
@@ -308,12 +308,14 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
         $subdomain = $conn->subdomain;
 
         if (empty($streamId)) {
-            tunnelLog("WS: received message with empty stream_id", true);
+            tunnelLog('WS: received message with empty stream_id', true);
+
             return;
         }
 
         if (! isset($addonWsStreams[$subdomain][$streamId])) {
             tunnelLog("WS: stream {$streamId} not found (stale message?)", true);
+
             return;
         }
 

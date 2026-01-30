@@ -39,9 +39,6 @@ php tunnel-server.php start
 
 # Clear all caches
 php artisan optimize:clear
-
-# Create test user and connection for local testing
-php artisan tunnel:create-test
 ```
 
 ## Architecture
@@ -65,17 +62,18 @@ php artisan tunnel:create-test
 app/
 ├── Http/
 │   ├── Controllers/
-│   │   ├── DashboardController.php
-│   │   ├── ConnectionController.php
-│   │   ├── ProxyController.php        # Handles subdomain HTTP proxying
-│   │   └── MarketingController.php
+│   │   ├── DashboardController.php    # Dashboard + subscription views
+│   │   ├── ConnectionController.php   # Create/delete/regenerate token
+│   │   ├── ProxyController.php        # HTTP proxying + WS script injection
+│   │   ├── MarketingController.php    # Public pages
+│   │   └── ProfileController.php      # User profile (Breeze)
 │   └── Middleware/
 │       ├── SubdomainProxy.php         # Subdomain detection (local dev)
 │       ├── ProxySecurityHeaders.php   # Security headers for proxied responses
 │       └── CheckSubscription.php
 ├── Models/
 │   ├── User.php
-│   ├── HaConnection.php
+│   ├── HaConnection.php               # Has getProxyUrl() helper
 │   └── Subscription.php
 ├── Services/
 │   └── TunnelManager.php              # File-cache IPC with tunnel server
@@ -85,9 +83,9 @@ app/
 tunnel-server.php                      # Workerman WebSocket tunnel server
 
 routes/
-├── web.php                            # Web routes
-├── api.php                            # Reserved for future API
-└── channels.php                       # Broadcast channel auth
+├── web.php                            # Web routes + subdomain proxy
+├── api.php                            # Empty (all tunnel communication via WebSocket)
+└── auth.php                           # Auth routes (Breeze)
 
 resources/views/
 ├── dashboard/                         # User dashboard views
@@ -122,7 +120,7 @@ Communication between Laravel web requests and the tunnel server uses file-based
 
 1. Browser loads HA page with injected WebSocket proxy script
 2. Script intercepts `new WebSocket()` calls to `/api/websocket`
-3. Browser connects to port 8082 with subdomain authentication
+3. Browser connects to port 8082 (dev) or /wss path (prod) with subdomain authentication
 4. `tunnel-server.php` tells add-on to open WebSocket to HA
 5. Messages are relayed bidirectionally through the tunnel
 
@@ -176,7 +174,7 @@ composer dev
 # 4. Add to /etc/hosts (for local subdomain routing):
 #    127.0.0.1 {subdomain}.harelay.test
 
-# 5. Visit https://{subdomain}.harelay.test and log in
+# 5. Visit https://{subdomain}.harelay.test:8000 and log in
 ```
 
 ### Testing with Valet
@@ -187,6 +185,8 @@ valet link harelay --secure
 
 # Update .env
 APP_PROXY_DOMAIN=harelay.test
+APP_PROXY_PORT=
+APP_PROXY_SECURE=true
 APP_URL=https://harelay.test
 SESSION_DOMAIN=.harelay.test
 ```
@@ -207,16 +207,28 @@ Key variables to configure:
 
 ```env
 # Application
-APP_PROXY_DOMAIN=harelay.com          # Domain for subdomains
 APP_URL=https://harelay.com
+APP_PROXY_DOMAIN=harelay.com          # Domain for subdomains
+APP_PROXY_PORT=                       # Empty for production, 8000 for dev
+APP_PROXY_SECURE=true                 # Use HTTPS for proxy URLs
 SESSION_DOMAIN=.harelay.com           # Important for subdomain cookies
 
 # Tunnel Server (Workerman)
 TUNNEL_HOST=0.0.0.0                   # Bind address
 TUNNEL_PORT=8081                      # Add-on connection port
 WS_PROXY_PORT=8082                    # Browser WebSocket proxy port
+WS_PROXY_PATH=/wss                    # Path-based WS for production (Nginx proxies to 8082)
 TUNNEL_DEBUG=false                    # Enable verbose logging
 ```
+
+### Production vs Development
+
+| Aspect | Development | Production |
+|--------|-------------|------------|
+| APP_PROXY_PORT | 8000 | (empty) |
+| APP_PROXY_SECURE | false | true |
+| WS_PROXY_PATH | (empty) | /wss |
+| Browser WS URL | ws://host:8082 | wss://host/wss |
 
 ## Security Notes
 

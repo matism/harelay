@@ -12,31 +12,31 @@ HARelay provides a secure tunnel between your Home Assistant instance and the in
 - Unique subdomain per user (e.g., `yourname.harelay.com`)
 - End-to-end encryption via TLS
 - Session-based authentication
+- Full WebSocket support for real-time Home Assistant features
 
 ## Architecture
 
 ```
-┌─────────────────┐     HTTPS        ┌──────────────────────────────────┐
-│  User Browser   │ ◄──────────────► │         HARelay Server           │
-│                 │                  │  - Laravel App (Marketing/Auth)  │
-└─────────────────┘                  │  - Reverb WebSocket Server       │
-        │                            │  - Proxy Controller              │
-        │                            └──────────────────────────────────┘
-        │                                       │
-        │ visits subdomain.harelay.com           │ WebSocket + HTTP API
-        │                                       │
-        │                            ┌──────────────────────────────────┐
-        └──────────────────────────► │      Home Assistant Add-on       │
-                                     │  - Connects via WebSocket        │
-                                     │  - Receives proxy requests       │
-                                     │  - Forwards to local HA          │
-                                     └──────────────────────────────────┘
-                                                │
-                                                ▼
-                                     ┌──────────────────────────────────┐
-                                     │      Home Assistant Instance     │
-                                     │      (localhost:8123)            │
-                                     └──────────────────────────────────┘
+┌─────────────────┐     HTTPS/WSS     ┌──────────────────────────────────┐
+│  User Browser   │ ◄───────────────► │         HARelay Server           │
+│                 │                   │  - Laravel App (HTTP proxy)      │
+└─────────────────┘                   │  - Workerman Tunnel Server       │
+        │                             │  - WebSocket Proxy               │
+        │                             └──────────────────────────────────┘
+        │ visits subdomain.harelay.com           │
+        │                                        │ WebSocket tunnel
+        │                             ┌──────────────────────────────────┐
+        └────────────────────────────►│      Home Assistant Add-on       │
+                                      │  - Connects via WebSocket        │
+                                      │  - Proxies HTTP requests         │
+                                      │  - Proxies WebSocket streams     │
+                                      └──────────────────────────────────┘
+                                                 │
+                                                 ▼
+                                      ┌──────────────────────────────────┐
+                                      │      Home Assistant Instance     │
+                                      │      (localhost:8123)            │
+                                      └──────────────────────────────────┘
 ```
 
 ### How It Works
@@ -53,75 +53,68 @@ HARelay provides a secure tunnel between your Home Assistant instance and the in
 - Node.js 20.19+ or 22.12+ (for Vite)
 - MySQL/PostgreSQL (production) or SQLite (development)
 
-## Installation
-
-### 1. Clone and Install Dependencies
+## Quick Start
 
 ```bash
+# Clone and install
 git clone https://github.com/your-org/harelay.git
 cd harelay
-composer install
-npm install
+composer setup
+
+# Start development server
+composer dev
 ```
 
-### 2. Environment Setup
+This runs:
+- **server**: Laravel development server (port 8000)
+- **queue**: Queue worker for background jobs
+- **logs**: Laravel Pail for real-time log viewing
+- **vite**: Vite dev server for hot reloading
+- **tunnel**: Workerman tunnel server (ports 8081/8082)
+
+## Development
+
+### Environment Setup
 
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
 
-### 3. Configure Environment
-
-Edit `.env` with your settings:
+Edit `.env` for local development:
 
 ```env
 APP_NAME=HARelay
-APP_URL=https://harelay.com
-APP_PROXY_DOMAIN=harelay.com
+APP_URL=http://localhost:8000
+APP_PROXY_DOMAIN=harelay.test
+APP_PROXY_PORT=8000
+APP_PROXY_SECURE=false
 
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_DATABASE=harelay
-DB_USERNAME=your_user
-DB_PASSWORD=your_password
+SESSION_DOMAIN=.harelay.test
 
-BROADCAST_CONNECTION=reverb
-
-REVERB_APP_ID=your_app_id
-REVERB_APP_KEY=your_app_key
-REVERB_APP_SECRET=your_app_secret
-REVERB_HOST=localhost
-REVERB_PORT=8080
-REVERB_SCHEME=http
+DB_CONNECTION=sqlite
 ```
 
-### 4. Run Migrations
+### Local Development with Valet
+
+For seamless wildcard subdomain support:
 
 ```bash
-php artisan migrate
+cd /path/to/harelay
+valet link harelay --secure
 ```
 
-### 5. Build Assets
+Update `.env`:
 
-```bash
-npm run build
+```env
+APP_URL=https://harelay.test
+APP_PROXY_DOMAIN=harelay.test
+APP_PROXY_PORT=
+APP_PROXY_SECURE=true
+SESSION_DOMAIN=.harelay.test
 ```
 
-## Development
-
-Start all development services with a single command:
-
-```bash
-composer dev
-```
-
-This runs concurrently:
-- **server**: Laravel development server (port 8000)
-- **queue**: Queue worker for background jobs
-- **logs**: Laravel Pail for real-time log viewing
-- **vite**: Vite dev server for hot reloading
-- **reverb**: WebSocket server (port 8080)
+Access subdomains: `https://{subdomain}.harelay.test`
 
 ### Running Tests
 
@@ -135,37 +128,141 @@ composer test
 ./vendor/bin/pint
 ```
 
-## Configuration
+## Production Deployment (Ubuntu/DigitalOcean)
 
-### Environment Variables
+### 1. Server Setup
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `APP_PROXY_DOMAIN` | Domain for user subdomains | `harelay.com` |
-| `REVERB_HOST` | WebSocket server hostname | `localhost` |
-| `REVERB_PORT` | WebSocket server port | `8080` |
-| `REVERB_SCHEME` | WebSocket protocol (`http`/`https`) | `http` |
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
 
-### Production Configuration
+# Install PHP 8.2+ and extensions
+sudo apt install -y php8.2-fpm php8.2-mysql php8.2-mbstring php8.2-xml \
+    php8.2-curl php8.2-zip php8.2-bcmath php8.2-sqlite3
 
-For production, ensure:
+# Install Composer
+curl -sS https://getcomposer.org/installer | php
+sudo mv composer.phar /usr/local/bin/composer
 
-1. **TLS Certificates**: Configure SSL for both the main domain and wildcard subdomain (`*.harelay.com`)
-2. **Reverb TLS**: Set `REVERB_SCHEME=https` and configure TLS in `config/reverb.php`
-3. **Web Server**: Configure nginx/Apache to route wildcard subdomains to Laravel
+# Install Node.js 22
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
 
-Example nginx configuration for wildcard subdomains:
+# Install Nginx
+sudo apt install -y nginx
+
+# Install MySQL
+sudo apt install -y mysql-server
+sudo mysql_secure_installation
+```
+
+### 2. Application Setup
+
+```bash
+# Create web directory
+sudo mkdir -p /var/www/harelay
+sudo chown $USER:$USER /var/www/harelay
+
+# Clone and install
+cd /var/www/harelay
+git clone https://github.com/your-org/harelay.git .
+composer install --no-dev --optimize-autoloader
+npm ci && npm run build
+
+# Environment
+cp .env.example .env
+php artisan key:generate
+```
+
+### 3. Configure Environment
+
+Edit `/var/www/harelay/.env`:
+
+```env
+APP_NAME=HARelay
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://harelay.com
+APP_PROXY_DOMAIN=harelay.com
+APP_PROXY_PORT=
+APP_PROXY_SECURE=true
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_DATABASE=harelay
+DB_USERNAME=harelay
+DB_PASSWORD=your_secure_password
+
+SESSION_DRIVER=database
+SESSION_DOMAIN=.harelay.com
+
+CACHE_STORE=database
+QUEUE_CONNECTION=database
+
+# Tunnel server
+TUNNEL_HOST=0.0.0.0
+TUNNEL_PORT=8081
+WS_PROXY_PORT=8082
+WS_PROXY_PATH=/wss
+TUNNEL_DEBUG=false
+```
+
+### 4. Database Setup
+
+```bash
+# Create database and user
+sudo mysql -u root -p <<EOF
+CREATE DATABASE harelay;
+CREATE USER 'harelay'@'localhost' IDENTIFIED BY 'your_secure_password';
+GRANT ALL PRIVILEGES ON harelay.* TO 'harelay'@'localhost';
+FLUSH PRIVILEGES;
+EOF
+
+# Run migrations
+php artisan migrate --force
+```
+
+### 5. SSL Certificates (Let's Encrypt)
+
+```bash
+# Install Certbot
+sudo apt install -y certbot python3-certbot-nginx
+
+# Get certificates (main domain)
+sudo certbot certonly --nginx -d harelay.com -d www.harelay.com
+
+# Get wildcard certificate (requires DNS validation)
+sudo certbot certonly --manual --preferred-challenges=dns \
+    -d "*.harelay.com" --agree-tos
+```
+
+### 6. Nginx Configuration
+
+Create `/etc/nginx/sites-available/harelay`:
 
 ```nginx
+# Main domain (harelay.com)
 server {
-    listen 443 ssl;
-    server_name *.harelay.com;
+    listen 80;
+    server_name harelay.com www.harelay.com;
+    return 301 https://$server_name$request_uri;
+}
 
-    ssl_certificate /path/to/wildcard.crt;
-    ssl_certificate_key /path/to/wildcard.key;
+server {
+    listen 443 ssl http2;
+    server_name harelay.com www.harelay.com;
+
+    ssl_certificate /etc/letsencrypt/live/harelay.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/harelay.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
+    ssl_prefer_server_ciphers off;
 
     root /var/www/harelay/public;
     index index.php;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
 
     location / {
         try_files $uri $uri/ /index.php?$query_string;
@@ -176,133 +273,175 @@ server {
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;
     }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
 }
-```
 
-## API Reference
-
-### Tunnel API (for HA Add-on)
-
-All endpoints require `subdomain` and `token` in the request body.
-
-#### Connect
-
-Register the add-on with the server.
-
-```http
-POST /api/tunnel/connect
-Content-Type: application/json
-
-{
-    "subdomain": "abc123",
-    "token": "your-connection-token"
+# Wildcard subdomains (*.harelay.com)
+server {
+    listen 80;
+    server_name *.harelay.com;
+    return 301 https://$host$request_uri;
 }
-```
 
-Response:
-```json
-{
-    "success": true,
-    "subdomain": "abc123",
-    "websocket": {
-        "host": "harelay.com",
-        "port": 443,
-        "scheme": "https",
-        "key": "reverb-app-key",
-        "channel": "private-tunnel.abc123"
-    },
-    "api": {
-        "auth_endpoint": "https://harelay.com/api/tunnel/auth",
-        "response_endpoint": "https://harelay.com/api/tunnel/response",
-        "heartbeat_endpoint": "https://harelay.com/api/tunnel/heartbeat"
+server {
+    listen 443 ssl http2;
+    server_name *.harelay.com;
+
+    ssl_certificate /etc/letsencrypt/live/harelay.com-0001/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/harelay.com-0001/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
+    ssl_prefer_server_ciphers off;
+
+    root /var/www/harelay/public;
+    index index.php;
+
+    add_header X-Robots-Tag "noindex, nofollow";
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    # WebSocket proxy path
+    location /wss {
+        proxy_pass http://127.0.0.1:8082;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 86400;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
     }
 }
 ```
 
-#### WebSocket Channel Auth
+Enable the site:
 
-Authenticate for the private WebSocket channel.
-
-```http
-POST /api/tunnel/auth
-Content-Type: application/json
-
-{
-    "socket_id": "123456.789",
-    "channel_name": "private-tunnel.abc123",
-    "subdomain": "abc123",
-    "token": "your-connection-token"
-}
+```bash
+sudo ln -s /etc/nginx/sites-available/harelay /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
-#### Heartbeat
+### 7. Tunnel Server Service
 
-Keep the connection alive (call every 30-60 seconds).
+Create `/etc/systemd/system/harelay-tunnel.service`:
 
-```http
-POST /api/tunnel/heartbeat
-Content-Type: application/json
+```ini
+[Unit]
+Description=HARelay Tunnel Server
+After=network.target
 
-{
-    "subdomain": "abc123",
-    "token": "your-connection-token"
-}
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/harelay
+ExecStart=/usr/bin/php tunnel-server.php start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-#### Submit Response
+Enable and start:
 
-Submit a response for a proxied request.
-
-```http
-POST /api/tunnel/response
-Content-Type: application/json
-
-{
-    "subdomain": "abc123",
-    "token": "your-connection-token",
-    "request_id": "uuid-of-request",
-    "status_code": 200,
-    "headers": {
-        "Content-Type": "text/html"
-    },
-    "body": "<html>...</html>"
-}
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable harelay-tunnel
+sudo systemctl start harelay-tunnel
 ```
 
-#### Poll Requests (Fallback)
+### 8. Queue Worker Service
 
-Alternative to WebSocket for receiving requests.
+Create `/etc/systemd/system/harelay-queue.service`:
 
-```http
-POST /api/tunnel/poll
-Content-Type: application/json
+```ini
+[Unit]
+Description=HARelay Queue Worker
+After=network.target
 
-{
-    "subdomain": "abc123",
-    "token": "your-connection-token"
-}
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/harelay
+ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-### WebSocket Events
+Enable and start:
 
-The add-on subscribes to `private-tunnel.{subdomain}` and receives:
-
-#### tunnel.request
-
-Fired when a user makes a request to their subdomain.
-
-```json
-{
-    "request_id": "550e8400-e29b-41d4-a716-446655440000",
-    "method": "GET",
-    "uri": "/api/states",
-    "headers": {
-        "accept": "application/json",
-        "user-agent": "Mozilla/5.0..."
-    },
-    "body": null
-}
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable harelay-queue
+sudo systemctl start harelay-queue
 ```
+
+### 9. File Permissions
+
+```bash
+sudo chown -R www-data:www-data /var/www/harelay
+sudo chmod -R 755 /var/www/harelay
+sudo chmod -R 775 /var/www/harelay/storage
+sudo chmod -R 775 /var/www/harelay/bootstrap/cache
+```
+
+### 10. Firewall Configuration
+
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 8081/tcp  # Tunnel server (add-on connections)
+sudo ufw enable
+```
+
+### Deployment Updates
+
+```bash
+cd /var/www/harelay
+git pull origin main
+composer install --no-dev --optimize-autoloader
+npm ci && npm run build
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+sudo systemctl restart harelay-tunnel
+sudo systemctl restart harelay-queue
+sudo systemctl reload php8.2-fpm
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `APP_PROXY_DOMAIN` | Domain for user subdomains | `harelay.com` |
+| `APP_PROXY_PORT` | Port for development (empty for production) | - |
+| `APP_PROXY_SECURE` | Use HTTPS for proxy URLs | `true` |
+| `TUNNEL_HOST` | Tunnel server bind address | `0.0.0.0` |
+| `TUNNEL_PORT` | Tunnel server port (add-on connections) | `8081` |
+| `WS_PROXY_PORT` | WebSocket proxy port | `8082` |
+| `WS_PROXY_PATH` | WebSocket path for production (e.g., `/wss`) | - |
+| `SESSION_DOMAIN` | Cookie domain (use `.domain.com` for subdomains) | - |
 
 ## Database Schema
 
@@ -316,234 +455,6 @@ Fired when a user makes a request to their subdomain.
 | connection_token | string | Hashed authentication token |
 | status | enum | `connected` or `disconnected` |
 | last_connected_at | timestamp | Last heartbeat time |
-| created_at | timestamp | Creation time |
-| updated_at | timestamp | Last update time |
-
-### subscriptions
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | bigint | Primary key |
-| user_id | bigint | Foreign key to users |
-| plan | enum | `free`, `monthly`, `annual` |
-| status | enum | `active`, `cancelled`, `expired` |
-| trial_ends_at | timestamp | Trial expiration (nullable) |
-| expires_at | timestamp | Subscription expiration (nullable) |
-| created_at | timestamp | Creation time |
-| updated_at | timestamp | Last update time |
-
-## Project Structure
-
-```
-app/
-├── Events/
-│   ├── TunnelConnected.php      # Fired when add-on connects
-│   ├── TunnelDisconnected.php   # Fired when add-on disconnects
-│   └── TunnelRequest.php        # Broadcast to add-on for proxy requests
-├── Http/
-│   ├── Controllers/
-│   │   ├── Api/
-│   │   │   ├── TunnelApiController.php   # Add-on API endpoints
-│   │   │   └── TunnelAuthController.php  # WebSocket auth
-│   │   ├── ConnectionController.php      # User connection management
-│   │   ├── DashboardController.php       # User dashboard
-│   │   ├── MarketingController.php       # Public pages
-│   │   └── ProxyController.php           # HTTP request proxying
-│   └── Middleware/
-│       ├── CheckSubscription.php         # Subscription validation
-│       └── ProxyMiddleware.php           # Subdomain detection
-├── Models/
-│   ├── HaConnection.php         # Connection model
-│   ├── Subscription.php         # Subscription model
-│   └── User.php                 # User model (with relationships)
-└── Services/
-    └── TunnelManager.php        # Tunnel orchestration service
-
-resources/views/
-├── components/
-│   └── marketing-layout.blade.php
-├── dashboard/
-│   ├── index.blade.php          # Connection status
-│   ├── setup.blade.php          # Setup instructions
-│   ├── settings.blade.php       # Token management
-│   └── subscription.blade.php   # Plan details
-├── errors/
-│   ├── auth-required.blade.php
-│   ├── tunnel-disconnected.blade.php
-│   └── tunnel-timeout.blade.php
-└── marketing/
-    ├── home.blade.php           # Landing page
-    ├── how-it-works.blade.php   # Setup guide
-    └── pricing.blade.php        # Plans comparison
-
-routes/
-├── api.php                      # Tunnel API routes
-├── channels.php                 # WebSocket channel auth
-└── web.php                      # Web routes + subdomain proxy
-```
-
-## Home Assistant Add-on Development
-
-The HA add-on needs to:
-
-1. **Connect to HARelay API** with subdomain and token
-2. **Subscribe to WebSocket channel** for receiving requests
-3. **Send heartbeats** every 30-60 seconds
-4. **Handle tunnel.request events** by making local HTTP requests to Home Assistant
-5. **Submit responses** via the API
-
-### Example Add-on Flow (Python)
-
-```python
-import asyncio
-import aiohttp
-import json
-from pusher import Pusher
-
-class HARelayTunnel:
-    def __init__(self, subdomain, token, server_url):
-        self.subdomain = subdomain
-        self.token = token
-        self.server_url = server_url
-        self.ha_url = "http://supervisor/core"
-
-    async def connect(self):
-        # Register with server
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{self.server_url}/api/tunnel/connect",
-                json={"subdomain": self.subdomain, "token": self.token}
-            ) as resp:
-                data = await resp.json()
-                self.ws_config = data["websocket"]
-
-        # Connect to WebSocket
-        self.pusher = Pusher(
-            app_id=self.ws_config["key"],
-            host=self.ws_config["host"],
-            port=self.ws_config["port"]
-        )
-
-        channel = self.pusher.subscribe(self.ws_config["channel"])
-        channel.bind("tunnel.request", self.handle_request)
-
-    async def handle_request(self, data):
-        # Forward to Home Assistant
-        async with aiohttp.ClientSession() as session:
-            async with session.request(
-                method=data["method"],
-                url=f"{self.ha_url}{data['uri']}",
-                headers=data["headers"],
-                data=data.get("body")
-            ) as resp:
-                body = await resp.text()
-
-                # Submit response
-                await session.post(
-                    f"{self.server_url}/api/tunnel/response",
-                    json={
-                        "subdomain": self.subdomain,
-                        "token": self.token,
-                        "request_id": data["request_id"],
-                        "status_code": resp.status,
-                        "headers": dict(resp.headers),
-                        "body": body
-                    }
-                )
-```
-
-## Testing
-
-### Local Development Testing
-
-1. **Start all services**:
-   ```bash
-   composer dev
-   ```
-
-2. **Create a test user and connection**:
-   ```bash
-   php artisan tunnel:create-test
-   ```
-   This creates a user (`test@example.com` / `password`) with a connection and displays the token.
-
-3. **Run the tunnel simulator**:
-   ```bash
-   php artisan tunnel:simulate {subdomain} "{token}" --ha-url=http://localhost:8123
-   ```
-   Replace `{subdomain}` and `{token}` with the values from step 2.
-
-4. **Test subdomain access** (requires hosts file or DNS setup):
-   - Add to `/etc/hosts`: `127.0.0.1 {subdomain}.harelay.com`
-   - Visit `http://{subdomain}.harelay.com:8000` in your browser
-   - Log in with `test@example.com` / `password`
-
-### Testing with Laravel Valet
-
-Valet makes wildcard subdomain testing easy:
-
-1. **Link the project with a custom domain**:
-   ```bash
-   cd /path/to/harelay
-   valet link harelay --secure
-   ```
-
-2. **Configure the proxy domain for Valet**:
-   ```env
-   # .env
-   APP_PROXY_DOMAIN=harelay.test
-   APP_URL=https://harelay.test
-   SESSION_DOMAIN=.harelay.test
-   ```
-
-   The `SESSION_DOMAIN` with a leading dot allows cookies to work across subdomains.
-
-3. **Park the parent directory** (if not already):
-   ```bash
-   cd /path/to/Sites
-   valet park
-   ```
-
-4. **Access subdomains**: Valet automatically handles `*.harelay.test`:
-   - Main site: `https://harelay.test`
-   - Subdomain: `https://{subdomain}.harelay.test`
-
-5. **Run Reverb separately** (Valet handles PHP, but not WebSocket):
-   ```bash
-   php artisan reverb:start
-   ```
-
-Note: For the tunnel to work, both the main Laravel app (via Valet) and Reverb must be running.
-
-### Testing with Real Home Assistant
-
-1. **On HARelay server**: Create your account and connection at `/dashboard/settings`
-
-2. **On Home Assistant**: Either:
-   - Install the HARelay add-on (when published), or
-   - Run the Python client manually from the [harelay-addon](https://github.com/harelay/harelay-addon) repository:
-     ```bash
-     pip install aiohttp websockets
-     python run.py --token "YOUR_TOKEN" --server "https://harelay.com" --ha-url "http://localhost:8123"
-     ```
-
-3. **Access your HA**: Visit `https://{your-subdomain}.harelay.com`
-
-### Testing the Tunnel Without HA
-
-Use the simulator with a simple HTTP server:
-
-```bash
-# Terminal 1: Start a simple HTTP server
-python -m http.server 8123
-
-# Terminal 2: Start HARelay
-composer dev
-
-# Terminal 3: Create test and run simulator
-php artisan tunnel:create-test
-php artisan tunnel:simulate {subdomain} "{token}" --ha-url=http://localhost:8123
-```
 
 ## Security Considerations
 
@@ -554,8 +465,6 @@ php artisan tunnel:simulate {subdomain} "{token}" --ha-url=http://localhost:8123
 5. **No Port Exposure**: Home Assistant never exposes ports to the internet
 6. **Token Rotation**: Users can regenerate tokens if compromised
 7. **No Crawling**: Subdomain routes include `X-Robots-Tag: noindex` headers
-8. **Rate Limiting**: API endpoints are rate-limited to prevent abuse
-9. **Security Headers**: Proxy responses include security headers (X-Frame-Options, CSP, etc.)
 
 ## Troubleshooting
 
@@ -564,20 +473,33 @@ php artisan tunnel:simulate {subdomain} "{token}" --ha-url=http://localhost:8123
 1. Check the add-on logs in Home Assistant
 2. Verify the connection token is correct
 3. Ensure Home Assistant has internet access
-4. Check if the HARelay server is reachable
+4. Check if port 8081 is accessible on the server
 
 ### Request Timeout (504)
 
 1. Home Assistant may be slow to respond
 2. Check HA logs for errors
-3. Try a simpler request (e.g., `/api/`)
-4. Verify the add-on is connected
+3. Verify the add-on is connected
 
-### Authentication Required
+### WebSocket not working
 
-1. Make sure you're logged into HARelay
-2. Clear browser cookies and try again
-3. Verify the subdomain matches your account
+1. Check if `/wss` path is proxied correctly in Nginx
+2. Verify the tunnel server is running: `systemctl status harelay-tunnel`
+3. Check browser console for WebSocket errors
+
+### Check Tunnel Server Status
+
+```bash
+# View tunnel server logs
+sudo journalctl -u harelay-tunnel -f
+
+# View queue worker logs
+sudo journalctl -u harelay-queue -f
+```
+
+## Home Assistant Add-on
+
+The HA add-on is maintained in a separate repository. See the [harelay-addon](https://github.com/harelay/harelay-addon) repository for installation and development instructions.
 
 ## License
 

@@ -56,15 +56,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Proxy Domain
+    | Proxy Domain Configuration
     |--------------------------------------------------------------------------
     |
     | This is the domain used for subdomain routing. Each user gets a
     | subdomain like {subdomain}.harelay.com to access their Home Assistant.
     |
+    | proxy_port: The port for development (null for production/standard ports)
+    | proxy_secure: Whether to use HTTPS for proxy URLs
+    |
     */
 
     'proxy_domain' => env('APP_PROXY_DOMAIN', 'harelay.com'),
+    'proxy_port' => env('APP_PROXY_PORT') ? (int) env('APP_PROXY_PORT') : null,
+    'proxy_secure' => (bool) env('APP_PROXY_SECURE', true),
 
     /*
     |--------------------------------------------------------------------------
