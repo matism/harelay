@@ -1,7 +1,46 @@
 <?php
 
+use App\Http\Controllers\ConnectionController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MarketingController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProxyController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
+// Marketing routes
+Route::get('/', [MarketingController::class, 'home'])->name('marketing.home');
+Route::get('/pricing', [MarketingController::class, 'pricing'])->name('marketing.pricing');
+Route::get('/how-it-works', [MarketingController::class, 'howItWorks'])->name('marketing.how-it-works');
+
+// Dashboard routes (authenticated)
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/setup', [DashboardController::class, 'setup'])->name('dashboard.setup');
+    Route::get('/dashboard/settings', [DashboardController::class, 'settings'])->name('dashboard.settings');
+    Route::get('/dashboard/subscription', [DashboardController::class, 'subscription'])->name('dashboard.subscription');
+
+    // Connection management
+    Route::post('/connection', [ConnectionController::class, 'store'])->name('connection.store');
+    Route::post('/connection/regenerate-token', [ConnectionController::class, 'regenerateToken'])->name('connection.regenerate-token');
+    Route::delete('/connection', [ConnectionController::class, 'destroy'])->name('connection.destroy');
+
+    // Profile (from Breeze)
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+// Subdomain proxy routes
+// Note: In production, configure your web server to route *.harelay.io to this app
+// The subdomain is captured and passed to the ProxyController
+Route::domain('{subdomain}.'.config('app.proxy_domain', 'harelay.io'))
+    ->middleware('web')
+    ->group(function () {
+        // Catch-all route for proxied requests
+        Route::any('/{path?}', [ProxyController::class, 'handle'])
+            ->where('path', '.*')
+            ->name('proxy.handle');
+    });
+
+require __DIR__.'/auth.php';

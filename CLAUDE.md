@@ -4,12 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Laravel 12 application for a Home Assistant proxy service (planned features: user auth, subscriptions, remote HA access).
+**HARelay** - A Laravel 12 application providing secure remote access to Home Assistant. Users get unique subdomains (e.g., `abc123.harelay.io`) and install a lightweight HA add-on that establishes a WebSocket tunnel for proxying requests.
+
+### Key Components
+
+- **Marketing Site**: Landing page, pricing, how-it-works
+- **User Dashboard**: Connection management, setup guide, settings
+- **Tunnel Server**: Laravel Reverb WebSocket + HTTP API for add-on communication
+- **Proxy System**: Routes subdomain requests through WebSocket tunnel to Home Assistant
 
 ## Common Commands
 
 ```bash
-# Development (runs server, queue, logs, and vite in parallel)
+# Development (runs server, queue, logs, vite, and reverb in parallel)
 composer dev
 
 # Setup new environment
@@ -32,26 +39,110 @@ php artisan make:migration create_table_name
 
 # Create model with migration, factory, and controller
 php artisan make:model ModelName -mfc
+
+# Start only the Reverb WebSocket server
+php artisan reverb:start
+
+# Clear all caches
+php artisan optimize:clear
 ```
 
 ## Architecture
 
 - **Framework**: Laravel 12 with Vite and Tailwind CSS 4
-- **Database**: SQLite (default), configured for MySQL/PostgreSQL in production
+- **Authentication**: Laravel Breeze (Blade)
+- **WebSocket**: Laravel Reverb (Pusher-compatible)
+- **Database**: MySQL (production), SQLite (development/testing)
 - **Queue**: Database driver
 - **Cache/Session**: Database driver
+- **Broadcasting**: Reverb
+
+### Database Tables
+
+- `users` - User accounts (Breeze)
+- `ha_connections` - User's HA connection (subdomain, token, status)
+- `subscriptions` - User subscription plans
 
 ### Directory Structure
 
-- `app/Http/` - Controllers and middleware
-- `app/Models/` - Eloquent models
-- `routes/web.php` - Web routes
-- `routes/console.php` - Artisan commands
-- `database/migrations/` - Database migrations
-- `resources/views/` - Blade templates
-- `tests/Feature/` - Feature tests
-- `tests/Unit/` - Unit tests
+```
+app/
+├── Events/                    # Tunnel events (TunnelRequest, TunnelConnected, etc.)
+├── Http/
+│   ├── Controllers/
+│   │   ├── Api/               # Tunnel API for HA add-on
+│   │   ├── DashboardController.php
+│   │   ├── ConnectionController.php
+│   │   ├── ProxyController.php    # Handles subdomain proxying
+│   │   └── MarketingController.php
+│   └── Middleware/
+│       ├── ProxyMiddleware.php    # Subdomain detection
+│       └── CheckSubscription.php
+├── Models/
+│   ├── User.php
+│   ├── HaConnection.php
+│   └── Subscription.php
+└── Services/
+    └── TunnelManager.php      # Orchestrates tunnel communication
+
+routes/
+├── api.php                    # Tunnel API routes (/api/tunnel/*)
+├── channels.php               # WebSocket channel auth
+└── web.php                    # Web + subdomain proxy routes
+
+resources/views/
+├── dashboard/                 # User dashboard views
+├── marketing/                 # Public marketing pages
+├── errors/                    # Tunnel error pages
+└── components/                # Blade components
+```
+
+## Tunnel System
+
+### Request Flow
+
+1. User visits `subdomain.harelay.io/path`
+2. `ProxyController` receives request
+3. `TunnelManager::proxyRequest()` broadcasts `TunnelRequest` event via Reverb
+4. HA add-on receives event on `private-tunnel.{subdomain}` channel
+5. Add-on makes request to local HA and POSTs response to `/api/tunnel/response`
+6. `TunnelManager` retrieves response from cache and returns to user
+
+### API Endpoints (for HA Add-on)
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/tunnel/connect` | Register add-on connection |
+| `POST /api/tunnel/disconnect` | Unregister connection |
+| `POST /api/tunnel/heartbeat` | Keep-alive (every 30-60s) |
+| `POST /api/tunnel/auth` | WebSocket channel authentication |
+| `POST /api/tunnel/response` | Submit proxied response |
+| `POST /api/tunnel/poll` | Polling fallback for requests |
+
+### WebSocket Events
+
+- **Channel**: `private-tunnel.{subdomain}`
+- **Event**: `tunnel.request` - Contains request_id, method, uri, headers, body
 
 ## Testing
 
 Tests use in-memory SQLite. Run with `composer test` or `php artisan test`.
+
+## Environment Variables
+
+Key variables to configure:
+
+```env
+APP_PROXY_DOMAIN=harelay.io          # Domain for subdomains
+BROADCAST_CONNECTION=reverb           # Use Reverb for WebSocket
+REVERB_HOST=localhost                 # WebSocket server host
+REVERB_PORT=8080                      # WebSocket server port
+REVERB_SCHEME=http                    # http or https
+```
+
+## Security Notes
+
+- Connection tokens are hashed (bcrypt) in database
+- Tokens shown only once to user (on create/regenerate)
+- Users must be authenticated to access their subdomain
+- Owner verification on all proxy requests
