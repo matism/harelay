@@ -35,6 +35,14 @@ class ProxyController extends Controller
 
         // Check authentication
         if (! $request->user()) {
+            // Debug: Log auth failure details
+            \Log::debug('Proxy auth failed', [
+                'path' => $request->path(),
+                'session_id' => session()->getId(),
+                'has_session' => $request->hasSession(),
+                'session_data' => session()->all(),
+            ]);
+
             session(['url.intended' => $request->fullUrl()]);
 
             return response()->view('errors.auth-required', [
