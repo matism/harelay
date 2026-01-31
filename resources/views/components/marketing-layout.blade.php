@@ -213,9 +213,6 @@
                 </div>
 
                 <div class="mt-12 pt-8 border-t border-white/10">
-                    <p class="text-slate-600 text-xs text-center mb-4">
-                        HARelay is an independent service, not affiliated with or endorsed by Home Assistant.
-                    </p>
                     <div class="flex flex-col md:flex-row justify-between items-center">
                         <p class="text-slate-500 text-sm">
                             &copy; {{ date('Y') }} HARelay. All rights reserved.
@@ -224,6 +221,9 @@
                             Made with &hearts; by Mathias Placho
                         </p>
                     </div>
+                    <p class="text-slate-600 text-xs text-center mt-6">
+                        HARelay is an independent service, not affiliated with or endorsed by Home Assistant.
+                    </p>
                 </div>
             </div>
         </footer>
