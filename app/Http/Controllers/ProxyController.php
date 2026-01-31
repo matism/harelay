@@ -35,14 +35,6 @@ class ProxyController extends Controller
 
         // Check authentication
         if (! $request->user()) {
-            // Debug: Log auth failure details
-            \Log::debug('Proxy auth failed', [
-                'path' => $request->path(),
-                'session_id' => session()->getId(),
-                'has_session' => $request->hasSession(),
-                'session_data' => session()->all(),
-            ]);
-
             session(['url.intended' => $request->fullUrl()]);
 
             return response()->view('errors.auth-required', [
@@ -91,7 +83,7 @@ class ProxyController extends Controller
             ], 504);
         }
 
-        return $this->buildResponse($response, $subdomain);
+        return $this->buildResponse($response);
     }
 
     /**
@@ -127,7 +119,7 @@ class ProxyController extends Controller
     /**
      * Build an HTTP response from tunnel response data.
      */
-    private function buildResponse(array $responseData, string $subdomain = ''): Response
+    private function buildResponse(array $responseData): Response
     {
         $statusCode = $responseData['status_code'] ?? 502;
         $headers = $responseData['headers'] ?? [];

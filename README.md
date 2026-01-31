@@ -320,8 +320,9 @@ server {
         proxy_send_timeout 86400;
     }
 
-    # Transparent WebSocket proxy for Home Assistant (primary method)
-    location ~ ^/api/(websocket|hassio) {
+    # Transparent WebSocket proxy for Home Assistant
+    # Only matches actual WebSocket upgrade requests, not regular HTTP
+    location = /api/websocket {
         proxy_pass http://127.0.0.1:8082;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
