@@ -1,11 +1,25 @@
 # HARelay robots.txt
-# Main marketing site is crawlable
-# User subdomains are protected via middleware headers
+# https://harelay.com
 
 User-agent: *
 Allow: /
-Allow: /pricing
 Allow: /how-it-works
+Allow: /privacy
+Allow: /imprint
+
+# Protected areas
 Disallow: /api/
-Disallow: /dashboard/
+Disallow: /dashboard
 Disallow: /profile
+Disallow: /login
+Disallow: /register
+Disallow: /link
+Disallow: /password
+Disallow: /email
+Disallow: /two-factor
+
+# Sitemap
+Sitemap: https://harelay.com/sitemap.xml
+
+# LLM-specific
+# See also: https://harelay.com/llms.txt

@@ -39,7 +39,7 @@
                         </div>
                         <div class="mt-6 bg-white/5 rounded-xl p-4">
                             <p class="text-sm text-slate-400 mb-1">Your URL</p>
-                            <p class="text-cyan-400 font-mono">yourname.{{ config('app.proxy_domain') }}</p>
+                            <p class="text-cyan-400 font-mono">abc123.{{ config('app.proxy_domain') }}</p>
                         </div>
                     </div>
                 </div>
@@ -90,12 +90,12 @@
                 <div class="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-8">
                     <div class="w-14 h-14 rounded-xl bg-cyan-500/20 flex items-center justify-center">
                         <svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                         </svg>
                     </div>
-                    <h3 class="mt-6 text-xl font-semibold text-white">Your Own Subdomain</h3>
+                    <h3 class="mt-6 text-xl font-semibold text-white">Two-Factor Authentication</h3>
                     <p class="mt-3 text-slate-400">
-                        Get a unique subdomain like yourname.{{ config('app.proxy_domain') }}. Access your Home Assistant with a memorable URL.
+                        Protect your account with optional 2FA using any authenticator app. Your smart home deserves extra security.
                     </p>
                 </div>
             </div>

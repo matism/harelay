@@ -18,6 +18,15 @@ class ProxyController extends Controller
      */
     public function handle(Request $request, string $subdomain): Response
     {
+        // Serve robots.txt for subdomains - prevent indexing
+        if ($request->path() === 'robots.txt') {
+            return response(
+                "User-agent: *\nDisallow: /\n",
+                200,
+                ['Content-Type' => 'text/plain']
+            );
+        }
+
         $connection = HaConnection::where('subdomain', $subdomain)->first();
 
         if (! $connection) {

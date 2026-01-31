@@ -5,12 +5,45 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ $title ?? 'HARelay - Secure Remote Access for Home Assistant' }}</title>
-        <meta name="description" content="{{ $description ?? 'Access your Home Assistant from anywhere without port forwarding. Secure WebSocket tunnel with easy setup.' }}">
+        @php
+            $pageTitle = $title ?? 'HARelay - Secure Remote Access for Home Assistant';
+            $pageDescription = $description ?? 'Access your Home Assistant from anywhere without port forwarding. Secure WebSocket tunnel with easy setup.';
+            $canonicalUrl = url()->current();
+            $siteName = 'HARelay';
+            $isHomePage = request()->is('/');
+        @endphp
+
+        <title>{{ $pageTitle }}</title>
+        <meta name="description" content="{{ $pageDescription }}">
+        <meta name="keywords" content="Home Assistant, remote access, smart home, WebSocket tunnel, no port forwarding, secure access, home automation">
+        <meta name="author" content="HARelay">
+        <meta name="robots" content="index, follow">
+
+        <!-- Canonical URL -->
+        <link rel="canonical" href="{{ $canonicalUrl }}">
+
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="{{ $canonicalUrl }}">
+        <meta property="og:title" content="{{ $pageTitle }}">
+        <meta property="og:description" content="{{ $pageDescription }}">
+        <meta property="og:site_name" content="{{ $siteName }}">
+        <meta property="og:locale" content="en_US">
+        <meta property="og:image" content="{{ asset('og-image.png') }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+
+        <!-- Twitter -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:url" content="{{ $canonicalUrl }}">
+        <meta name="twitter:title" content="{{ $pageTitle }}">
+        <meta name="twitter:description" content="{{ $pageDescription }}">
+        <meta name="twitter:image" content="{{ asset('og-image.png') }}">
 
         <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="/favicon.svg">
         <link rel="icon" type="image/png" href="/favicon.png">
+        <link rel="apple-touch-icon" href="/favicon.png">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -18,19 +51,73 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        <!-- JSON-LD Structured Data -->
+        <script type="application/ld+json">
+        {
+            "@@context": "https://schema.org",
+            "@@type": "SoftwareApplication",
+            "name": "HARelay",
+            "applicationCategory": "WebApplication",
+            "operatingSystem": "Any",
+            "description": "{{ $pageDescription }}",
+            "url": "https://harelay.com",
+            "author": {
+                "@@type": "Person",
+                "name": "Mathias Placho"
+            },
+            "offers": {
+                "@@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            },
+            "aggregateRating": {
+                "@@type": "AggregateRating",
+                "ratingValue": "5",
+                "ratingCount": "1"
+            }
+        }
+        </script>
+
+        @if($isHomePage)
+        <script type="application/ld+json">
+        {
+            "@@context": "https://schema.org",
+            "@@type": "Organization",
+            "name": "HARelay",
+            "url": "https://harelay.com",
+            "logo": "{{ asset('favicon.png') }}",
+            "description": "Secure remote access to Home Assistant without port forwarding",
+            "contactPoint": {
+                "@@type": "ContactPoint",
+                "email": "mathias@harelay.com",
+                "contactType": "customer service"
+            },
+            "address": {
+                "@@type": "PostalAddress",
+                "streetAddress": "Frauengasse 7",
+                "addressLocality": "Graz",
+                "postalCode": "8010",
+                "addressCountry": "AT"
+            }
+        }
+        </script>
+        @endif
     </head>
     <body class="font-sans antialiased bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 min-h-screen">
         <!-- Navigation -->
         <nav class="bg-white/5 backdrop-blur-lg border-b border-white/10 sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
-                    <div class="flex items-center">
-                        <a href="/" class="flex items-center space-x-2">
-                            <x-application-logo class="w-8 h-8 text-cyan-400" />
-                            <span class="text-xl font-bold text-white">HARelay</span>
-                        </a>
-                        <div class="hidden sm:ml-10 sm:flex sm:space-x-8">
-                            <a href="{{ route('marketing.how-it-works') }}" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-slate-300 hover:text-white transition">
+                    <div class="flex">
+                        <div class="shrink-0 flex items-center">
+                            <a href="/" class="flex items-center space-x-2">
+                                <x-application-logo class="w-8 h-8 text-cyan-400" />
+                                <span class="text-xl font-bold text-white">HARelay</span>
+                            </a>
+                        </div>
+                        <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                            <a href="{{ route('marketing.how-it-works') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out {{ request()->routeIs('marketing.how-it-works') ? 'border-cyan-400 text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-slate-400' }}">
                                 How It Works
                             </a>
                         </div>

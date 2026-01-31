@@ -30,7 +30,7 @@
                             Create Your Account
                         </h3>
                         <p class="mt-4 text-lg text-slate-400">
-                            Sign up for a free HARelay account. You'll get a unique subdomain (like <code class="bg-white/10 px-2 py-1 rounded text-cyan-400">yourname.{{ config('app.proxy_domain') }}</code>) automatically assigned to you.
+                            Sign up for a free HARelay account. You'll get a unique subdomain (like <code class="bg-white/10 px-2 py-1 rounded text-cyan-400">abc123.{{ config('app.proxy_domain') }}</code>) automatically assigned to you.
                         </p>
                         <div class="mt-6">
                             <a href="{{ route('register') }}" class="inline-flex items-center px-5 py-3 bg-cyan-500 hover:bg-cyan-400 border border-transparent rounded-lg font-semibold text-slate-900 transition">
@@ -119,7 +119,7 @@
                         </p>
                         <div class="mt-6 bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4">
                             <p class="text-cyan-300">
-                                <strong>Your URL:</strong> <code class="bg-cyan-500/20 px-2 py-1 rounded">yourname.{{ config('app.proxy_domain') }}</code>
+                                <strong>Your URL:</strong> <code class="bg-cyan-500/20 px-2 py-1 rounded">abc123.{{ config('app.proxy_domain') }}</code>
                             </p>
                         </div>
                     </div>
