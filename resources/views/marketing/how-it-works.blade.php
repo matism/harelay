@@ -68,8 +68,13 @@
                             Install the Home Assistant Add-on
                         </h3>
                         <p class="mt-4 text-lg text-slate-400">
-                            Add our repository to Home Assistant and install the HARelay add-on. Start the add-on and it will automatically enter pairing mode.
+                            Add our repository to Home Assistant's built-in <span class="text-white">Add-on Store</span> (not HACS) and install the HARelay add-on. Start the add-on and it will automatically enter pairing mode.
                         </p>
+                        <div class="mt-4 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+                            <p class="text-amber-300 text-sm">
+                                <strong>Where to find the Add-on Store:</strong> Settings &rarr; Add-ons &rarr; Add-on Store &rarr; Three dots menu &rarr; Repositories
+                            </p>
+                        </div>
                         <div class="mt-6">
                             <ul class="space-y-3">
                                 <li class="flex items-start text-slate-300">
@@ -95,7 +100,7 @@
                     </div>
                     <div class="mt-10 lg:mt-0 lg:order-1">
                         <div class="bg-slate-800 rounded-2xl shadow-xl p-4 sm:p-6 font-mono text-sm">
-                            <div class="text-slate-500 mb-4"># Home Assistant Add-on Repository</div>
+                            <div class="text-slate-500 mb-4"># Add to Home Assistant Add-on Store (not HACS)</div>
                             <div class="space-y-2">
                                 <div class="text-cyan-400 break-all">https://github.com/harelay/ha-addon</div>
                                 <div class="mt-6 text-slate-500"># That's all you need to add!</div>

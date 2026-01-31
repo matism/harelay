@@ -27,6 +27,7 @@
             <label for="password" class="block text-sm font-medium text-slate-300">Password</label>
             <input id="password" type="password" name="password" required autocomplete="new-password"
                 class="mt-1 block w-full rounded-lg border-0 bg-white/10 text-white placeholder-slate-400 shadow-sm ring-1 ring-inset ring-white/20 focus:ring-2 focus:ring-cyan-400 sm:text-sm px-4 py-3">
+            <p class="mt-1.5 text-xs text-slate-500">Must be at least 8 characters</p>
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 

@@ -12,8 +12,31 @@
                         from anywhere
                     </h1>
                     <p class="mt-6 text-lg text-slate-300 max-w-xl">
-                        Secure remote access without port forwarding. Install our simple add-on, enter a pairing code, and connect to your home in seconds. Free to use.
+                        Remote access to Home Assistant usually means port forwarding, dynamic DNS, and security headaches. HARelay eliminates all of that.
                     </p>
+
+                    <!-- What you get -->
+                    <ul class="mt-6 space-y-3">
+                        <li class="flex items-start text-slate-300">
+                            <svg class="flex-shrink-0 w-5 h-5 text-cyan-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>A personal URL like <code class="text-cyan-400 bg-white/10 px-1.5 py-0.5 rounded text-sm">abc123.harelay.com</code></span>
+                        </li>
+                        <li class="flex items-start text-slate-300">
+                            <svg class="flex-shrink-0 w-5 h-5 text-cyan-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>No router configuration or open ports required</span>
+                        </li>
+                        <li class="flex items-start text-slate-300">
+                            <svg class="flex-shrink-0 w-5 h-5 text-cyan-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>Works behind any firewall, NAT, or CGNAT</span>
+                        </li>
+                    </ul>
+
                     <div class="mt-10 flex flex-col sm:flex-row gap-4">
                         <a href="{{ route('register') }}" class="inline-flex items-center justify-center px-8 py-4 bg-cyan-500 hover:bg-cyan-400 border border-transparent rounded-xl font-semibold text-slate-900 transition text-lg">
                             Get Started Free
@@ -22,7 +45,7 @@
                             </svg>
                         </a>
                         <a href="{{ route('marketing.how-it-works') }}" class="inline-flex items-center justify-center px-8 py-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl font-semibold text-white transition text-lg">
-                            Learn How It Works
+                            How It Works
                         </a>
                     </div>
                 </div>
@@ -47,15 +70,68 @@
         </div>
     </div>
 
-    <!-- Features Section -->
+    <!-- How it actually works (Technical credibility) -->
+    <div class="py-16 border-y border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="lg:grid lg:grid-cols-2 lg:gap-12 items-center">
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white">
+                        Why no port forwarding?
+                    </h2>
+                    <p class="mt-4 text-slate-400">
+                        Traditional remote access requires you to open ports on your router, exposing your network to the internet. HARelay works differently.
+                    </p>
+                    <p class="mt-4 text-slate-400">
+                        Our add-on creates an <span class="text-white">outbound</span> connection from your Home Assistant to our servers. Since the connection goes <span class="text-white">out</span> from your network (just like browsing a website), no ports need to be opened. Your router's firewall stays intact.
+                    </p>
+                </div>
+                <div class="mt-8 lg:mt-0">
+                    <div class="bg-white/5 rounded-xl p-6 border border-white/10">
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="text-center">
+                                <div class="w-12 h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center mx-auto mb-2">
+                                    <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-white font-medium">Your HA</p>
+                            </div>
+                            <div class="flex-1 px-4">
+                                <div class="flex items-center">
+                                    <div class="flex-1 border-t-2 border-dashed border-cyan-500/50"></div>
+                                    <svg class="w-4 h-4 text-cyan-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1 text-center">Outbound connection</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-12 h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center mx-auto mb-2">
+                                    <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-white font-medium">HARelay</p>
+                            </div>
+                        </div>
+                        <p class="mt-4 text-xs text-slate-500 text-center">
+                            Your firewall allows outbound connections by default
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- What is HARelay -->
     <div class="py-24 bg-white/5">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
                 <h2 class="text-3xl sm:text-4xl font-bold text-white">
-                    Why HARelay?
+                    What is HARelay?
                 </h2>
                 <p class="mt-4 text-lg text-slate-400 max-w-2xl mx-auto">
-                    Simple, secure, and reliable remote access for your smart home.
+                    HARelay is a <span class="text-white">web service</span> combined with a <span class="text-white">Home Assistant add-on</span>. The add-on runs on your Home Assistant and creates a secure tunnel. You then access your Home Assistant through your personal HARelay URL from any browser.
                 </p>
             </div>
 

@@ -22,11 +22,16 @@
                                 </div>
                             </div>
                             <div class="ml-3 sm:ml-5 min-w-0">
-                                <h4 class="text-lg font-medium text-white">Add the HARelay Repository</h4>
+                                <h4 class="text-lg font-medium text-white">Add the HARelay Repository to the Add-on Store</h4>
                                 <p class="mt-2 text-slate-400">
                                     In Home Assistant, go to <span class="text-white">Settings</span> &rarr; <span class="text-white">Add-ons</span> &rarr; <span class="text-white">Add-on Store</span>.
                                     Click the three dots in the top right and select <span class="text-white">Repositories</span>.
                                 </p>
+                                <div class="mt-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                                    <p class="text-amber-300 text-xs">
+                                        <strong>Note:</strong> This is <strong>not</strong> HACS. Use the built-in Add-on Store under Settings &rarr; Add-ons.
+                                    </p>
+                                </div>
                                 <div class="mt-3 flex items-center gap-2 sm:gap-3 bg-white/5 rounded-lg p-3 sm:p-4 ring-1 ring-white/10">
                                     <code class="text-cyan-400 text-xs sm:text-sm flex-1 min-w-0 break-words" style="word-break: break-word;">https://github.com/harelay/ha-addon</code>
                                     <button onclick="navigator.clipboard.writeText('https://github.com/harelay/ha-addon')"

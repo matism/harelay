@@ -195,13 +195,18 @@
                     </div>
                 </div>
 
-                <div class="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center">
-                    <p class="text-slate-500 text-sm">
-                        &copy; {{ date('Y') }} HARelay. All rights reserved.
+                <div class="mt-12 pt-8 border-t border-white/10">
+                    <p class="text-slate-600 text-xs text-center mb-4">
+                        HARelay is an independent service, not affiliated with or endorsed by Home Assistant.
                     </p>
-                    <p class="text-slate-500 text-sm mt-4 md:mt-0">
-                        Made for the Home Assistant community
-                    </p>
+                    <div class="flex flex-col md:flex-row justify-between items-center">
+                        <p class="text-slate-500 text-sm">
+                            &copy; {{ date('Y') }} HARelay. All rights reserved.
+                        </p>
+                        <p class="text-slate-500 text-sm mt-4 md:mt-0">
+                            Made with &hearts; by Mathias Placho
+                        </p>
+                    </div>
                 </div>
             </div>
         </footer>
