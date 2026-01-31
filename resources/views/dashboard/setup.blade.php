@@ -30,7 +30,7 @@
                                 <div class="mt-3 flex items-center gap-2 sm:gap-3 bg-white/5 rounded-lg p-3 sm:p-4 ring-1 ring-white/10">
                                     <code class="text-cyan-400 text-xs sm:text-sm flex-1 min-w-0 break-words" style="word-break: break-word;">https://github.com/harelay/ha-addon</code>
                                     <button onclick="navigator.clipboard.writeText('https://github.com/harelay/ha-addon')"
-                                        class="flex-shrink-0 text-slate-400 hover:text-white transition p-1">
+                                        class="flex-shrink-0 text-slate-400 hover:text-white transition p-1" title="Copy to clipboard">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                         </svg>
