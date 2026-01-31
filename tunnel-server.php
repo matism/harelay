@@ -80,6 +80,9 @@ function trackTraffic(string $subdomain, int $bytesIn = 0, int $bytesOut = 0): v
 function authenticateSession(string $encryptedSessionId, string $subdomain): ?int
 {
     try {
+        // URL-decode the cookie value (browsers send cookies URL-encoded)
+        $encryptedSessionId = urldecode($encryptedSessionId);
+
         // Decrypt the session cookie
         $decrypted = app('encrypter')->decrypt($encryptedSessionId, false);
 
