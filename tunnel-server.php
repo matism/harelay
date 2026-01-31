@@ -74,6 +74,7 @@ function trackTraffic(string $subdomain, int $bytesIn = 0, int $bytesOut = 0): v
 
 /**
  * Flush traffic buffer to database.
+ * Updates both cumulative stats on ha_connections and daily stats on daily_traffic.
  * Reconnects if connection is stale.
  */
 function flushTrafficBuffer(): void
@@ -84,21 +85,41 @@ function flushTrafficBuffer(): void
         return;
     }
 
+    $today = date('Y-m-d');
+
     try {
         // Reconnect to handle stale connections in long-running process
         DB::reconnect();
 
         foreach ($trafficBuffer as $subdomain => $bytes) {
-            if ($bytes['in'] > 0) {
-                DB::table('ha_connections')
-                    ->where('subdomain', $subdomain)
-                    ->increment('bytes_in', $bytes['in']);
+            // Get connection ID
+            $connectionId = DB::table('ha_connections')
+                ->where('subdomain', $subdomain)
+                ->value('id');
+
+            if (! $connectionId) {
+                continue;
             }
-            if ($bytes['out'] > 0) {
+
+            // Update cumulative stats on ha_connections (existing behavior)
+            if ($bytes['in'] > 0 || $bytes['out'] > 0) {
                 DB::table('ha_connections')
-                    ->where('subdomain', $subdomain)
-                    ->increment('bytes_out', $bytes['out']);
+                    ->where('id', $connectionId)
+                    ->update([
+                        'bytes_in' => DB::raw("bytes_in + {$bytes['in']}"),
+                        'bytes_out' => DB::raw("bytes_out + {$bytes['out']}"),
+                    ]);
             }
+
+            // Upsert daily stats
+            DB::statement(
+                'INSERT INTO daily_traffic (ha_connection_id, date, bytes_in, bytes_out)
+                 VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                 bytes_in = bytes_in + VALUES(bytes_in),
+                 bytes_out = bytes_out + VALUES(bytes_out)',
+                [$connectionId, $today, $bytes['in'], $bytes['out']]
+            );
         }
 
         $totalIn = array_sum(array_column($trafficBuffer, 'in'));
