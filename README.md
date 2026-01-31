@@ -523,7 +523,7 @@ sudo journalctl -u harelay-queue -f
 
 ## Home Assistant Add-on
 
-The HA add-on is maintained in a separate repository. See the [harelay-addon](https://github.com/harelay/harelay-addon) repository for installation and development instructions.
+The HA add-on is maintained in a separate repository. See the [ha-addon](https://github.com/harelay/ha-addon) repository for installation and development instructions.
 
 ## License
 
