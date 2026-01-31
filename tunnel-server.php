@@ -548,7 +548,7 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
             'headers' => $message['headers'] ?? [],
             'body' => $body,
             'is_base64' => true,
-        ], 30);
+        ], 60);
 
         return;
     }

@@ -265,6 +265,11 @@ TUNNEL_DEBUG=false                    # Enable verbose logging
 | WS_PROXY_PATH | (empty) | /wss |
 | Browser WS URL | ws://host:8082 | wss://host/wss |
 
+## Proxy Handling Notes
+
+### Supervisor API (`/api/hassio/*`)
+For Supervisor API endpoints, the add-on forwards the user's original Authorization token instead of replacing it with the Supervisor token. This allows HA to validate user permissions for admin-only endpoints like addon logs.
+
 ## Security Notes
 
 - Connection tokens are hashed (bcrypt) in database
@@ -273,7 +278,7 @@ TUNNEL_DEBUG=false                    # Enable verbose logging
 - Owner verification on all proxy requests
 - Subdomain sanitization: `preg_replace('/[^a-z0-9]/', '', $subdomain)`
 - Subdomains are 16 characters (36^16 ≈ 7.9 × 10^24 combinations) to prevent brute-force
-- WebSocket path validation: only `/api/websocket` and `/api/hassio` allowed
+- WebSocket path validation: only `/api/websocket` allowed for transparent proxy
 - Stream IDs use cryptographically secure random bytes
 - Security headers on proxy responses (X-Robots-Tag, X-Frame-Options)
 - Device codes expire after 15 minutes

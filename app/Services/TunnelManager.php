@@ -18,7 +18,7 @@ class TunnelManager
 
     private const CONNECTION_TTL = 120; // seconds
 
-    private const REQUEST_TTL = 30; // seconds
+    private const REQUEST_TTL = 60; // seconds
 
     /**
      * Check if a tunnel connection is active.

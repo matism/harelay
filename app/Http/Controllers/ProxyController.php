@@ -27,16 +27,6 @@ class ProxyController extends Controller
             );
         }
 
-        // Return empty service worker to prevent HA's service worker from
-        // intercepting requests on the HARelay domain
-        if (str_ends_with($request->path(), 'sw-modern.js') || str_ends_with($request->path(), 'sw-legacy.js')) {
-            return response(
-                "// HARelay: Service worker disabled for proxy\nself.addEventListener('install', () => self.skipWaiting());\nself.addEventListener('activate', () => self.clients.claim());",
-                200,
-                ['Content-Type' => 'application/javascript', 'Service-Worker-Allowed' => '/']
-            );
-        }
-
         $connection = HaConnection::where('subdomain', $subdomain)->first();
 
         if (! $connection) {
@@ -68,11 +58,6 @@ class ProxyController extends Controller
         $method = $request->method();
         $uri = $request->getRequestUri();
         $headers = $this->filterRequestHeaders($request->headers->all());
-
-        // Temporary debug: log forwarded headers for hassio
-        if (str_contains($uri, 'hassio')) {
-            file_put_contents('/tmp/harelay-debug.log', date('Y-m-d H:i:s').' FORWARDING: '.json_encode(array_keys($headers))."\n", FILE_APPEND);
-        }
         $body = $request->getContent();
         $contentType = $request->header('Content-Type', '');
 
@@ -119,12 +104,6 @@ class ProxyController extends Controller
             'upgrade',
             'cookie',
             'x-csrf-token',
-            'referer',           // HA validates Referer for Supervisor API
-            'sec-fetch-dest',    // Not needed, may cause issues
-            'sec-fetch-mode',
-            'sec-fetch-site',
-            'pragma',
-            'cache-control',
         ];
 
         $filtered = [];
