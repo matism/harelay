@@ -183,12 +183,12 @@
                         <ul class="mt-4 space-y-3">
                             <li>
                                 <a href="{{ route('marketing.vs-nabu-casa') }}" class="text-slate-400 hover:text-white text-sm transition">
-                                    HARelay vs Nabu Casa
+                                    Nabu Casa vs HARelay
                                 </a>
                             </li>
                             <li>
                                 <a href="{{ route('marketing.vs-homeflow') }}" class="text-slate-400 hover:text-white text-sm transition">
-                                    HARelay vs Homeflow.io
+                                    Homeflow.io vs HARelay
                                 </a>
                             </li>
                         </ul>

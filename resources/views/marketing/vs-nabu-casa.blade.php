@@ -1,5 +1,5 @@
 <x-marketing-layout>
-    <x-slot name="title">HARelay vs Nabu Casa - Free Home Assistant Remote Access Alternative</x-slot>
+    <x-slot name="title">Nabu Casa vs HARelay - Free Home Assistant Remote Access Alternative</x-slot>
     <x-slot name="description">Compare HARelay and Nabu Casa for Home Assistant remote access. HARelay offers free, simple remote access without monthly subscriptions.</x-slot>
 
     <!-- Hero -->
@@ -17,7 +17,7 @@
                     Free Alternative
                 </div>
                 <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-white">
-                    HARelay vs <span class="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">Nabu Casa</span>
+                    Nabu Casa vs <span class="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">HARelay</span>
                 </h1>
                 <p class="mt-6 text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
                     Looking for a free alternative to Nabu Casa for remote access? HARelay provides the same core functionality without the monthly subscription.
@@ -41,23 +41,23 @@
                     <thead>
                         <tr class="border-b border-white/10">
                             <th class="px-6 py-5 text-left text-sm font-semibold text-slate-300">Feature</th>
+                            <th class="px-6 py-5 text-center text-sm font-semibold text-slate-400">Nabu Casa</th>
                             <th class="px-6 py-5 text-center">
                                 <span class="inline-flex items-center px-3 py-1 rounded-lg bg-cyan-500/20 text-cyan-400 text-sm font-semibold">
                                     HARelay
                                 </span>
                             </th>
-                            <th class="px-6 py-5 text-center text-sm font-semibold text-slate-400">Nabu Casa</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-white/10">
                         <tr class="hover:bg-white/5 transition-colors">
                             <td class="px-6 py-5 text-slate-300 font-medium">Price</td>
+                            <td class="px-6 py-5 text-center text-slate-400">$6.50/month</td>
                             <td class="px-6 py-5 text-center">
                                 <span class="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold bg-green-500/20 text-green-400 ring-1 ring-green-500/30">
                                     Free
                                 </span>
                             </td>
-                            <td class="px-6 py-5 text-center text-slate-400">$6.50/month</td>
                         </tr>
                         <tr class="hover:bg-white/5 transition-colors">
                             <td class="px-6 py-5 text-slate-300 font-medium">Remote Access</td>
@@ -112,24 +112,24 @@
                         </tr>
                         <tr class="hover:bg-white/5 transition-colors">
                             <td class="px-6 py-5 text-slate-300 font-medium">Setup Complexity</td>
+                            <td class="px-6 py-5 text-center text-slate-400">Account linking</td>
                             <td class="px-6 py-5 text-center">
                                 <span class="text-cyan-400 font-medium">Simple pairing code</span>
                             </td>
-                            <td class="px-6 py-5 text-center text-slate-400">Account linking</td>
                         </tr>
                         <tr class="hover:bg-white/5 transition-colors">
                             <td class="px-6 py-5 text-slate-300 font-medium">Google/Alexa Integration</td>
                             <td class="px-6 py-5 text-center">
-                                <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-500/20">
-                                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-500/20">
+                                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                     </svg>
                                 </div>
                             </td>
                             <td class="px-6 py-5 text-center">
-                                <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-500/20">
-                                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-500/20">
+                                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                     </svg>
                                 </div>
                             </td>
@@ -150,6 +150,35 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Nabu Casa Card -->
+                <div class="relative bg-white/5 backdrop-blur-lg rounded-3xl border border-white/10 p-8 flex flex-col">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-700 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white">Choose Nabu Casa if...</h3>
+                    </div>
+                    <ul class="space-y-4 flex-grow">
+                        <li class="flex items-start">
+                            <svg class="w-5 h-5 text-slate-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-slate-400">You need <strong class="text-slate-300">Google Home or Alexa</strong> voice control</span>
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-5 h-5 text-slate-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-slate-400">You want to <strong class="text-slate-300">support HA development</strong> financially</span>
+                        </li>
+                    </ul>
+                    <div class="mt-8 pt-6 border-t border-white/10">
+                        <p class="text-slate-500">$6.50/month subscription</p>
+                    </div>
+                </div>
+
                 <!-- HARelay Card -->
                 <div class="group relative flex">
                     <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
@@ -185,35 +214,6 @@
                         <div class="mt-8 pt-6 border-t border-white/10">
                             <p class="text-green-400 font-semibold text-lg">Save $78/year</p>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Nabu Casa Card -->
-                <div class="relative bg-white/5 backdrop-blur-lg rounded-3xl border border-white/10 p-8 flex flex-col">
-                    <div class="flex items-center space-x-3 mb-6">
-                        <div class="w-12 h-12 rounded-2xl bg-slate-700 flex items-center justify-center">
-                            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-2xl font-bold text-white">Choose Nabu Casa if...</h3>
-                    </div>
-                    <ul class="space-y-4 flex-grow">
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-slate-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <span class="text-slate-400">You need <strong class="text-slate-300">Google Home or Alexa</strong> voice control</span>
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-slate-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <span class="text-slate-400">You want to <strong class="text-slate-300">support HA development</strong> financially</span>
-                        </li>
-                    </ul>
-                    <div class="mt-8 pt-6 border-t border-white/10">
-                        <p class="text-slate-500">$6.50/month subscription</p>
                     </div>
                 </div>
             </div>
@@ -281,25 +281,5 @@
         </div>
     </div>
 
-    <!-- CTA -->
-    <div class="py-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="bg-cyan-500 rounded-2xl p-8 md:p-12 text-center">
-                <h2 class="text-3xl sm:text-4xl font-bold text-slate-900">
-                    Ready to get started?
-                </h2>
-                <p class="mt-4 text-lg text-slate-700 max-w-2xl mx-auto">
-                    Create your free account and connect your Home Assistant in minutes.
-                </p>
-                <div class="mt-8">
-                    <a href="{{ route('register') }}" class="inline-flex items-center justify-center px-8 py-4 bg-slate-900 hover:bg-slate-800 border border-transparent rounded-xl font-semibold text-white transition text-lg">
-                        Create Free Account
-                        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                        </svg>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-cta-box />
 </x-marketing-layout>

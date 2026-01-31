@@ -250,25 +250,5 @@
         </div>
     </div>
 
-    <!-- CTA Section -->
-    <div class="py-24">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="bg-cyan-500 rounded-2xl p-8 md:p-12 text-center">
-                <h2 class="text-3xl sm:text-4xl font-bold text-slate-900">
-                    Ready to get started?
-                </h2>
-                <p class="mt-4 text-lg text-slate-700 max-w-2xl mx-auto">
-                    Create your free account and connect your Home Assistant in minutes.
-                </p>
-                <div class="mt-8">
-                    <a href="{{ route('register') }}" class="inline-flex items-center justify-center px-8 py-4 bg-slate-900 hover:bg-slate-800 border border-transparent rounded-xl font-semibold text-white transition text-lg">
-                        Create Free Account
-                        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                        </svg>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-cta-box />
 </x-marketing-layout>
