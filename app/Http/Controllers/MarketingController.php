@@ -25,4 +25,14 @@ class MarketingController extends Controller
     {
         return view('marketing.imprint');
     }
+
+    public function vsNabuCasa(): View
+    {
+        return view('marketing.vs-nabu-casa');
+    }
+
+    public function vsHomeflow(): View
+    {
+        return view('marketing.vs-homeflow');
+    }
 }

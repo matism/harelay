@@ -13,6 +13,8 @@ Route::get('/', [MarketingController::class, 'home'])->name('marketing.home');
 Route::get('/how-it-works', [MarketingController::class, 'howItWorks'])->name('marketing.how-it-works');
 Route::get('/privacy', [MarketingController::class, 'privacy'])->name('marketing.privacy');
 Route::get('/imprint', [MarketingController::class, 'imprint'])->name('marketing.imprint');
+Route::get('/vs/nabu-casa', [MarketingController::class, 'vsNabuCasa'])->name('marketing.vs-nabu-casa');
+Route::get('/vs/homeflow', [MarketingController::class, 'vsHomeflow'])->name('marketing.vs-homeflow');
 
 // Device linking
 Route::get('/link', [DeviceLinkController::class, 'show'])->name('device.link');
