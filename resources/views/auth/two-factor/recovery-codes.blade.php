@@ -37,10 +37,10 @@
                     </div>
 
                     <!-- Recovery Codes Grid -->
-                    <div class="bg-slate-900/50 rounded-xl p-6 mb-6">
-                        <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-900/50 rounded-xl p-4 sm:p-6 mb-6">
+                        <div class="grid grid-cols-2 gap-2 sm:gap-3">
                             @foreach($recoveryCodes as $code)
-                                <code class="text-sm font-mono text-slate-300 bg-white/5 rounded-lg px-3 py-2 text-center select-all">
+                                <code class="text-xs sm:text-sm font-mono text-slate-300 bg-white/5 rounded-lg px-2 sm:px-3 py-2 text-center select-all break-all">
                                     {{ $code }}
                                 </code>
                             @endforeach

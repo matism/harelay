@@ -39,7 +39,7 @@
                         </div>
                         <div class="mt-6 bg-white/5 rounded-xl p-4">
                             <p class="text-sm text-slate-400 mb-1">Your URL</p>
-                            <p class="text-cyan-400 font-mono">abc123.{{ config('app.proxy_domain') }}</p>
+                            <p class="text-cyan-400 font-mono break-all">abc123.{{ config('app.proxy_domain') }}</p>
                         </div>
                     </div>
                 </div>

@@ -94,10 +94,10 @@
                         </div>
                     </div>
                     <div class="mt-10 lg:mt-0 lg:order-1">
-                        <div class="bg-slate-800 rounded-2xl shadow-xl p-6 font-mono text-sm">
+                        <div class="bg-slate-800 rounded-2xl shadow-xl p-4 sm:p-6 font-mono text-sm">
                             <div class="text-slate-500 mb-4"># Home Assistant Add-on Repository</div>
                             <div class="space-y-2">
-                                <div class="text-cyan-400">https://github.com/harelay/ha-addon</div>
+                                <div class="text-cyan-400 break-all">https://github.com/harelay/ha-addon</div>
                                 <div class="mt-6 text-slate-500"># That's all you need to add!</div>
                                 <div class="text-slate-500"># No configuration required - just start the add-on</div>
                             </div>

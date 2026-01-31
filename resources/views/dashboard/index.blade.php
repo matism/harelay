@@ -20,7 +20,7 @@
 
             <!-- Connection Status Card -->
             <div class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl rounded-2xl border border-white/20">
-                <div class="p-8">
+                <div class="p-4 sm:p-8">
                     @if($connection)
                         <!-- Connected State -->
                         <div class="text-center">
@@ -44,9 +44,9 @@
                             @endif
 
                             <!-- Connection URL -->
-                            <div class="bg-white/5 rounded-xl p-6 mb-6">
+                            <div class="bg-white/5 rounded-xl p-4 sm:p-6 mb-6">
                                 <p class="text-sm text-slate-400 mb-2">Your Home Assistant URL</p>
-                                <a href="{{ $connection->getProxyUrl() }}" target="_blank" class="text-lg font-medium text-cyan-400 hover:text-cyan-300 transition break-all">
+                                <a href="{{ $connection->getProxyUrl() }}" target="_blank" class="text-base sm:text-lg font-medium text-cyan-400 hover:text-cyan-300 transition break-words hyphens-none" style="word-break: break-word;">
                                     {{ $connection->getProxyUrl() }}
                                 </a>
                             </div>

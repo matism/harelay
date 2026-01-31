@@ -22,7 +22,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 px-4 sm:px-6 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
             <!-- Logo and Brand -->
             <div class="text-center mb-6">
                 <a href="/" class="inline-flex items-center space-x-3">
@@ -33,7 +33,7 @@
             </div>
 
             <!-- Card -->
-            <div class="w-full sm:max-w-md px-6 py-8 bg-white/10 backdrop-blur-lg shadow-xl overflow-hidden sm:rounded-2xl border border-white/20">
+            <div class="w-full max-w-md px-6 py-8 bg-white/10 backdrop-blur-lg shadow-xl overflow-hidden rounded-2xl border border-white/20">
                 {{ $slot }}
             </div>
 
