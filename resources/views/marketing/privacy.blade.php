@@ -92,7 +92,7 @@
                         HARelay uses minimal third-party services:
                     </p>
                     <ul class="list-disc list-inside text-slate-300 space-y-2 ml-4">
-                        <li><strong class="text-white">Hosting Provider:</strong> Our servers are hosted on secure infrastructure with appropriate data protection agreements in place.</li>
+                        <li><strong class="text-white">Hosting Provider:</strong> Our servers are hosted on secure infrastructure in Germany with appropriate data protection agreements in place.</li>
                         <li><strong class="text-white">Email Service:</strong> We may use email providers to send transactional emails (account verification, password reset).</li>
                     </ul>
                     <p class="text-slate-300 mt-4">
