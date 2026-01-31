@@ -16,7 +16,8 @@ Route::get('/imprint', [MarketingController::class, 'imprint'])->name('marketing
 
 // Device linking
 Route::get('/link', [DeviceLinkController::class, 'show'])->name('device.link');
-Route::post('/link', [DeviceLinkController::class, 'link'])->middleware(['auth', 'verified']);
+Route::post('/link', [DeviceLinkController::class, 'link'])
+    ->middleware(['auth', 'verified', 'throttle:10,1']); // 10 per minute
 
 // Dashboard routes (authenticated)
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -26,11 +27,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard/settings', [DashboardController::class, 'settings'])->name('dashboard.settings');
     Route::get('/dashboard/subscription', [DashboardController::class, 'subscription'])->name('dashboard.subscription');
 
-    // Connection management
-    Route::post('/connection', [ConnectionController::class, 'store'])->name('connection.store');
-    Route::post('/connection/regenerate-token', [ConnectionController::class, 'regenerateToken'])->name('connection.regenerate-token');
-    Route::patch('/connection/subdomain', [ConnectionController::class, 'updateSubdomain'])->name('connection.update-subdomain');
-    Route::delete('/connection', [ConnectionController::class, 'destroy'])->name('connection.destroy');
+    // Connection management (rate limited to prevent abuse)
+    Route::post('/connection', [ConnectionController::class, 'store'])
+        ->middleware('throttle:5,1') // 5 per minute
+        ->name('connection.store');
+    Route::post('/connection/regenerate-token', [ConnectionController::class, 'regenerateToken'])
+        ->middleware('throttle:5,1') // 5 per minute
+        ->name('connection.regenerate-token');
+    Route::patch('/connection/subdomain', [ConnectionController::class, 'updateSubdomain'])
+        ->middleware('throttle:5,1') // 5 per minute
+        ->name('connection.update-subdomain');
+    Route::delete('/connection', [ConnectionController::class, 'destroy'])
+        ->middleware('throttle:5,1') // 5 per minute
+        ->name('connection.destroy');
 
     // Profile (from Breeze)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
