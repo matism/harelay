@@ -66,7 +66,7 @@ app/
 │   ├── Controllers/
 │   │   ├── DashboardController.php    # Dashboard + subscription views
 │   │   ├── ConnectionController.php   # Create/delete/regenerate token/update subdomain
-│   │   ├── ProxyController.php        # HTTP proxying + WS script injection
+│   │   ├── ProxyController.php        # HTTP proxying
 │   │   ├── MarketingController.php    # Public pages
 │   │   ├── DeviceLinkController.php   # Device code pairing (/link)
 │   │   └── ProfileController.php      # User profile (Breeze)
@@ -125,11 +125,17 @@ Communication between Laravel web requests and the tunnel server uses file-based
 
 ### Request Flow (WebSocket)
 
-1. Browser loads HA page with injected WebSocket proxy script
-2. Script intercepts `new WebSocket()` calls to `/api/websocket`
-3. Browser connects to port 8082 (dev) or /wss path (prod) with subdomain authentication
-4. `tunnel-server.php` tells add-on to open WebSocket to HA
-5. Messages are relayed bidirectionally through the tunnel
+WebSocket connections are handled transparently via session cookie authentication:
+
+1. Browser's native WebSocket connects to `/api/websocket` on the subdomain
+2. Nginx routes the WebSocket upgrade request to `tunnel-server.php` (port 8082)
+3. `onWebSocketConnect` callback extracts subdomain from Host header
+4. Session cookie is decrypted and validated against the sessions table
+5. Ownership verified: session user must own the subdomain
+6. `onWebSocketConnected` callback sets up the stream and tells add-on to open WebSocket to HA
+7. Messages are relayed bidirectionally through the tunnel
+
+This transparent approach requires no JavaScript injection - Home Assistant's native WebSocket calls work directly.
 
 ### Add-on Protocol
 

@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Workerman\Connection\TcpConnection;
+use Workerman\Protocols\Http\Request;
 use Workerman\Timer;
 use Workerman\Worker;
 
@@ -70,6 +71,52 @@ function trackTraffic(string $subdomain, int $bytesIn = 0, int $bytesOut = 0): v
 
     $trafficBuffer[$subdomain]['in'] += $bytesIn;
     $trafficBuffer[$subdomain]['out'] += $bytesOut;
+}
+
+/**
+ * Authenticate a session cookie and verify ownership of subdomain.
+ * Returns user_id if valid, null otherwise.
+ */
+function authenticateSession(string $encryptedSessionId, string $subdomain): ?int
+{
+    try {
+        // Decrypt the session cookie
+        $decrypted = app('encrypter')->decrypt($encryptedSessionId, false);
+
+        // Database sessions use format: hash|session_id
+        $sessionId = str_contains($decrypted, '|')
+            ? explode('|', $decrypted)[1]
+            : $decrypted;
+
+        DB::reconnect();
+
+        // Query sessions table for user_id
+        $session = DB::table('sessions')
+            ->where('id', $sessionId)
+            ->first();
+
+        if (! $session || ! $session->user_id) {
+            return null;
+        }
+
+        // Check session hasn't expired
+        $lifetime = config('session.lifetime', 120) * 60;
+        if (time() - $session->last_activity > $lifetime) {
+            return null;
+        }
+
+        // Verify user owns this subdomain
+        $connection = DB::table('ha_connections')
+            ->where('subdomain', $subdomain)
+            ->where('user_id', $session->user_id)
+            ->first();
+
+        return $connection ? (int) $session->user_id : null;
+    } catch (\Exception $e) {
+        tunnelLog("Session auth error: {$e->getMessage()}");
+
+        return null;
+    }
 }
 
 /**
@@ -166,6 +213,93 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
         $conn->subdomain = null;
         $conn->streamId = null;
         $conn->authenticated = false;
+        $conn->transparentAuth = false;
+    };
+
+    // Transparent WebSocket authentication via session cookie during HTTP upgrade
+    $wsProxy->onWebSocketConnect = function (TcpConnection $conn, $request) use (&$addonConnections) {
+        // Extract subdomain from Host header
+        $host = $request->host();
+        $proxyDomain = config('app.proxy_domain', 'harelay.com');
+
+        if (! preg_match('/^([a-z0-9]+)\.'.preg_quote($proxyDomain, '/').'$/i', $host, $matches)) {
+            tunnelLog("WS proxy: invalid host: {$host}");
+            $conn->close();
+
+            return;
+        }
+        $subdomain = strtolower($matches[1]);
+
+        // Validate path - only HA WebSocket paths trigger transparent auth
+        $path = $request->path();
+        if (! preg_match('#^/api/(websocket|hassio)#', $path)) {
+            // Not a HA WebSocket path - might be /wss legacy, let onMessage handle
+            return;
+        }
+
+        // Check tunnel connected
+        if (! isset($addonConnections[$subdomain])) {
+            tunnelLog("WS proxy: tunnel not connected for {$subdomain}");
+            $conn->close();
+
+            return;
+        }
+
+        // Authenticate via session cookie
+        $sessionCookie = $request->cookie(config('session.cookie', 'laravel_session'));
+        if (! $sessionCookie) {
+            tunnelLog("WS proxy: no session cookie for {$subdomain}");
+            $conn->close();
+
+            return;
+        }
+
+        $userId = authenticateSession($sessionCookie, $subdomain);
+        if (! $userId) {
+            tunnelLog("WS proxy: auth failed for {$subdomain}");
+            $conn->close();
+
+            return;
+        }
+
+        // Mark as authenticated
+        $conn->subdomain = $subdomain;
+        $conn->path = $path;
+        $conn->userId = $userId;
+        $conn->authenticated = true;
+        $conn->streamId = bin2hex(random_bytes(16));
+        $conn->transparentAuth = true;
+
+        tunnelLog("WS proxy: authenticated {$subdomain} via cookie (user={$userId})", true);
+    };
+
+    // Set up stream after transparent auth handshake completes
+    $wsProxy->onWebSocketConnected = function (TcpConnection $conn, $request) use (&$addonConnections, &$browserWsConnections, &$addonWsStreams) {
+        // Only for transparent auth (cookie-based)
+        if (! ($conn->transparentAuth ?? false)) {
+            return;
+        }
+
+        $subdomain = $conn->subdomain;
+
+        if (! isset($browserWsConnections[$subdomain])) {
+            $browserWsConnections[$subdomain] = [];
+        }
+        if (! isset($addonWsStreams[$subdomain])) {
+            $addonWsStreams[$subdomain] = [];
+        }
+
+        $browserWsConnections[$subdomain][$conn->id] = $conn;
+        $addonWsStreams[$subdomain][$conn->streamId] = $conn->id;
+
+        // Tell add-on to open WebSocket to HA
+        $addonConnections[$subdomain]->send(json_encode([
+            'type' => 'ws_open',
+            'stream_id' => $conn->streamId,
+            'path' => $conn->path,
+        ]));
+
+        tunnelLog("WS proxy: stream opened {$subdomain} (stream={$conn->streamId})", true);
     };
 
     $wsProxy->onMessage = function (TcpConnection $conn, $data) use (&$addonConnections, &$browserWsConnections, &$addonWsStreams) {

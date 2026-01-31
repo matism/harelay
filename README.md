@@ -306,7 +306,33 @@ server {
     add_header X-Frame-Options "SAMEORIGIN";
     add_header X-Content-Type-Options "nosniff";
 
-    # WebSocket proxy path
+    # Tunnel WebSocket (for Home Assistant add-on connections)
+    location /tunnel {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
+    }
+
+    # Transparent WebSocket proxy for Home Assistant (primary method)
+    location ~ ^/api/(websocket|hassio) {
+        proxy_pass http://127.0.0.1:8082;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header Cookie $http_cookie;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 86400;
+    }
+
+    # Legacy WebSocket proxy path (fallback)
     location /wss {
         proxy_pass http://127.0.0.1:8082;
         proxy_http_version 1.1;
@@ -413,9 +439,10 @@ sudo chmod -R 775 /var/www/harelay/bootstrap/cache
 ```bash
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw allow 8081/tcp  # Tunnel server (add-on connections)
 sudo ufw enable
 ```
+
+Note: Ports 8081 (add-on tunnel) and 8082 (browser WebSocket) don't need to be exposed - Nginx proxies to them on localhost via `/tunnel` and `/api/websocket` paths.
 
 ### Deployment Updates (Zero-Downtime)
 

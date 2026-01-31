@@ -130,20 +130,6 @@ class ProxyController extends Controller
             $body = base64_decode($body);
         }
 
-        // Get content type (case-insensitive)
-        $contentType = '';
-        foreach ($headers as $name => $value) {
-            if (strtolower($name) === 'content-type') {
-                $contentType = $value;
-                break;
-            }
-        }
-
-        // Inject WebSocket proxy script into HTML pages
-        if (str_contains($contentType, 'text/html') && $subdomain) {
-            $body = $this->injectWebSocketProxy($body, $subdomain);
-        }
-
         // Filter response headers
         $skipHeaders = [
             'transfer-encoding',
@@ -161,71 +147,5 @@ class ProxyController extends Controller
         }
 
         return response($body, $statusCode, $filteredHeaders);
-    }
-
-    /**
-     * Inject WebSocket proxy script into HTML to redirect HA WebSocket connections.
-     */
-    private function injectWebSocketProxy(string $html, string $subdomain): string
-    {
-        $host = request()->getHost();
-        $scheme = request()->secure() ? 'wss' : 'ws';
-
-        // In production (HTTPS): use path-based WebSocket (e.g., wss://subdomain.harelay.com/wss)
-        // In development (HTTP with port): use separate port (e.g., ws://subdomain.harelay.test:8082)
-        $wsProxyPath = config('app.ws_proxy_path');
-        $wsProxyPort = (int) config('app.ws_proxy_port', 8082);
-
-        // If HTTPS and no explicit port config, always use /wss path
-        if (request()->secure() && $wsProxyPath) {
-            $wsUrl = "{$scheme}://{$host}{$wsProxyPath}";
-        } elseif (request()->secure()) {
-            // Default to /wss for HTTPS even if not configured
-            $wsUrl = "{$scheme}://{$host}/wss";
-        } else {
-            // Development: use separate port
-            $wsUrl = "{$scheme}://{$host}:{$wsProxyPort}";
-        }
-
-        // Minified, production-ready script
-        $script = <<<JS
-<script>
-(function(){
-    var O=window.WebSocket,s='{$subdomain}',u='{$wsUrl}';
-    window.WebSocket=function(a,p){
-        var r=new URL(a,location.href);
-        if(r.pathname.indexOf('/api/websocket')>-1||r.pathname.indexOf('/api/hassio')>-1){
-            var w=new O(u,p);
-            w.addEventListener('open',function(){
-                w.send(JSON.stringify({type:'auth',subdomain:s,path:r.pathname}));
-            },{once:true});
-            return w;
-        }
-        return new O(a,p);
-    };
-    window.WebSocket.prototype=O.prototype;
-    window.WebSocket.CONNECTING=O.CONNECTING;
-    window.WebSocket.OPEN=O.OPEN;
-    window.WebSocket.CLOSING=O.CLOSING;
-    window.WebSocket.CLOSED=O.CLOSED;
-})();
-</script>
-JS;
-
-        // Inject at the start of <head> to override WebSocket before any scripts load
-        if (str_contains($html, '<head>')) {
-            return str_replace('<head>', '<head>'.$script, $html);
-        }
-        if (str_contains($html, '<head ')) {
-            return preg_replace('/(<head[^>]*>)/i', '$1'.$script, $html);
-        }
-        if (str_contains($html, '</head>')) {
-            return str_replace('</head>', $script.'</head>', $html);
-        }
-        if (str_contains($html, '<body')) {
-            return preg_replace('/(<body[^>]*>)/i', '$1'.$script, $html);
-        }
-
-        return $script.$html;
     }
 }
