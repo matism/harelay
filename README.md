@@ -478,6 +478,18 @@ See `DEPLOYMENT.md` for full deployment documentation.
 | status | enum | `pending`, `linked`, `expired`, `used` |
 | expires_at | timestamp | Code expiration time (15 minutes) |
 
+### daily_traffic
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | bigint | Primary key |
+| ha_connection_id | bigint | Foreign key to ha_connections (cascade delete) |
+| date | date | Date of the traffic record |
+| bytes_in | bigint | Bytes uploaded by user on this date |
+| bytes_out | bigint | Bytes downloaded by user on this date |
+
+Unique index on `(ha_connection_id, date)` for efficient upserts. Updated atomically every 30 seconds by the tunnel server.
+
 ## Security Considerations
 
 1. **Connection Tokens**: Tokens are hashed in the database and shown only once to users

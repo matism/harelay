@@ -56,6 +56,7 @@ php artisan optimize:clear
 - `ha_connections` - User's HA connection (subdomain, token, status, last_connected_at, bytes_in, bytes_out)
 - `subscriptions` - User subscription plans
 - `device_codes` - Device pairing codes for add-on setup (expires after 15 minutes)
+- `daily_traffic` - Daily traffic statistics per connection (ha_connection_id, date, bytes_in, bytes_out)
 
 ### Directory Structure
 
@@ -280,9 +281,35 @@ The tunnel server tracks bytes transferred per connection:
 
 Traffic is buffered in memory and flushed to the database every 30 seconds for efficiency. Buffer is also flushed on graceful shutdown.
 
-Helper methods in `HaConnection`:
+### Storage
+
+Traffic data is stored in two places:
+- **`ha_connections`**: Cumulative totals (`bytes_in`, `bytes_out`) for quick access
+- **`daily_traffic`**: Daily breakdown for historical statistics (uses atomic UPSERT)
+
+### Helper Methods
+
+`HaConnection` model:
 - `getFormattedBytesIn()` / `getFormattedBytesOut()` / `getFormattedTotalBytes()` - Human-readable format (KB/MB/GB)
 - `formatBytes(int $bytes)` - Static helper for formatting
+
+### Querying Daily Statistics
+
+```php
+// Get daily stats for a connection
+DailyTraffic::where('ha_connection_id', $id)
+    ->whereBetween('date', [$start, $end])
+    ->get();
+
+// Get total for a connection (alternative to cumulative columns)
+DailyTraffic::where('ha_connection_id', $id)->sum('bytes_in');
+
+// Get all-time stats grouped by day
+DailyTraffic::where('ha_connection_id', $id)
+    ->selectRaw('date, bytes_in, bytes_out')
+    ->orderBy('date')
+    ->get();
+```
 
 ## User Permissions
 
