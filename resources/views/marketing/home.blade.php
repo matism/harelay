@@ -12,7 +12,7 @@
                         from anywhere
                     </h1>
                     <p class="mt-6 text-lg text-slate-300 max-w-xl">
-                        Secure remote access without port forwarding. Install our simple add-on, enter a pairing code, and connect to your home in seconds. Free forever.
+                        Secure remote access without port forwarding. Install our simple add-on, enter a pairing code, and connect to your home in seconds. Free to use.
                     </p>
                     <div class="mt-10 flex flex-col sm:flex-row gap-4">
                         <a href="{{ route('register') }}" class="inline-flex items-center justify-center px-8 py-4 bg-cyan-500 hover:bg-cyan-400 border border-transparent rounded-xl font-semibold text-slate-900 transition text-lg">
@@ -157,7 +157,7 @@
         </div>
     </div>
 
-    <!-- Free Forever Banner -->
+    <!-- Free Banner -->
     <div class="py-16 bg-white/5">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-2xl border border-cyan-500/30 p-8 md:p-12 text-center">
@@ -166,9 +166,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <h2 class="text-3xl font-bold text-white">Completely Free</h2>
+                <h2 class="text-3xl font-bold text-white">Free to Use</h2>
                 <p class="mt-4 text-lg text-slate-300 max-w-2xl mx-auto">
-                    HARelay is free for everyone. No hidden fees, no premium tiers, no credit card required. We built this for the Home Assistant community.
+                    HARelay is free. No credit card required. We built this for the Home Assistant community.
                 </p>
             </div>
         </div>
