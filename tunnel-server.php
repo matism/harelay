@@ -408,7 +408,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
     Timer::add(0.02, function () use (&$addonConnections) {  // 20ms polling for faster response
         foreach ($addonConnections as $subdomain => $conn) {
             $pendingKey = "tunnel:pending:{$subdomain}";
-            $requests = Cache::store('file')->get($pendingKey, []);
+            $requests = Cache::store('redis')->get($pendingKey, []);
 
             if (empty($requests)) {
                 continue;
@@ -441,7 +441,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
                 ]));
             }
 
-            Cache::store('file')->forget($pendingKey);
+            Cache::store('redis')->forget($pendingKey);
         }
     });
 
@@ -543,7 +543,7 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
             trackTraffic($conn->subdomain, 0, $bodyBytes);
         }
 
-        Cache::store('file')->put("tunnel:response:{$requestId}", [
+        Cache::store('redis')->put("tunnel:response:{$requestId}", [
             'status_code' => $statusCode,
             'headers' => $message['headers'] ?? [],
             'body' => $body,

@@ -68,7 +68,7 @@ sudo apt update
 
 sudo apt install -y php8.3 php8.3-fpm php8.3-cli php8.3-mysql php8.3-mbstring \
     php8.3-xml php8.3-bcmath php8.3-curl php8.3-zip php8.3-gd php8.3-intl \
-    php8.3-readline php8.3-pcov php8.3-sockets
+    php8.3-readline php8.3-pcov php8.3-sockets php8.3-redis
 ```
 
 ### 2. Install Composer
@@ -94,19 +94,35 @@ sudo apt install -y mysql-server
 sudo mysql_secure_installation
 ```
 
-### 5. Install Nginx
+### 5. Install Redis
+
+Redis is required for communication between the web server and tunnel server:
+
+```bash
+sudo apt install -y redis-server
+
+# Enable and start Redis
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+
+# Verify it's running
+redis-cli ping
+# Should return: PONG
+```
+
+### 6. Install Nginx
 
 ```bash
 sudo apt install -y nginx
 ```
 
-### 6. Install Certbot (for SSL)
+### 7. Install Certbot (for SSL)
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
 ```
 
-### 7. Install Supervisor (for process management)
+### 8. Install Supervisor (for process management)
 
 ```bash
 sudo apt install -y supervisor
@@ -209,9 +225,15 @@ DB_USERNAME=harelay
 DB_PASSWORD=your-secure-password-here
 
 # Cache and Session
-CACHE_DRIVER=file
+CACHE_STORE=redis
 SESSION_DRIVER=database
 QUEUE_CONNECTION=database
+
+# Redis (required for tunnel IPC and caching)
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
 
 # Tunnel Server
 TUNNEL_HOST=0.0.0.0
@@ -745,7 +767,13 @@ Add:
 - Check Nginx configuration for *.harelay.com
 - Verify wildcard SSL certificate covers *.harelay.com
 
-**5. Permission errors**
+**5. Redis not working**
+- Check if Redis is running: `sudo systemctl status redis-server`
+- Test connection: `redis-cli ping` (should return PONG)
+- Check PHP Redis extension: `php -m | grep redis`
+- View Redis logs: `sudo tail -f /var/log/redis/redis-server.log`
+
+**6. Permission errors**
 ```bash
 sudo chown -R www-data:www-data /var/www/harelay/current
 sudo chown -R www-data:www-data /var/www/harelay/shared

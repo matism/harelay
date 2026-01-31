@@ -9,8 +9,8 @@ use Illuminate\Support\Str;
 /**
  * Manages tunnel connections and proxied requests.
  *
- * Uses file cache for communication with the tunnel server process
- * to avoid database connection issues in long-running processes.
+ * Uses Redis cache for communication with the tunnel server process
+ * for fast, reliable IPC between web requests and the tunnel server.
  */
 class TunnelManager
 {
@@ -58,7 +58,7 @@ class TunnelManager
 
         // Store request in file cache (base64 encode body for safe JSON transport)
         $pendingKey = $this->getPendingCacheKey($subdomain);
-        $pendingRequests = Cache::store('file')->get($pendingKey, []);
+        $pendingRequests = Cache::store('redis')->get($pendingKey, []);
         $pendingRequests[$requestId] = [
             'method' => $method,
             'uri' => $uri,
@@ -67,7 +67,7 @@ class TunnelManager
             'body_encoded' => true,
             'created_at' => now()->toIso8601String(),
         ];
-        Cache::store('file')->put($pendingKey, $pendingRequests, self::REQUEST_TTL);
+        Cache::store('redis')->put($pendingKey, $pendingRequests, self::REQUEST_TTL);
 
         // Wait for response with exponential backoff
         $responseKey = $this->getResponseCacheKey($requestId);
@@ -76,10 +76,10 @@ class TunnelManager
         $interval = 10000; // Start at 10ms for faster initial response
 
         while ($waited < $maxWaitMicroseconds) {
-            $response = Cache::store('file')->get($responseKey);
+            $response = Cache::store('redis')->get($responseKey);
 
             if ($response !== null) {
-                Cache::store('file')->forget($responseKey);
+                Cache::store('redis')->forget($responseKey);
                 $this->removePendingRequest($subdomain, $requestId);
 
                 return $response;
@@ -101,19 +101,19 @@ class TunnelManager
      */
     public function getPendingRequests(string $subdomain): array
     {
-        return Cache::store('file')->get($this->getPendingCacheKey($subdomain), []);
+        return Cache::store('redis')->get($this->getPendingCacheKey($subdomain), []);
     }
 
     private function removePendingRequest(string $subdomain, string $requestId): void
     {
         $pendingKey = $this->getPendingCacheKey($subdomain);
-        $pendingRequests = Cache::store('file')->get($pendingKey, []);
+        $pendingRequests = Cache::store('redis')->get($pendingKey, []);
         unset($pendingRequests[$requestId]);
 
         if (empty($pendingRequests)) {
-            Cache::store('file')->forget($pendingKey);
+            Cache::store('redis')->forget($pendingKey);
         } else {
-            Cache::store('file')->put($pendingKey, $pendingRequests, self::REQUEST_TTL);
+            Cache::store('redis')->put($pendingKey, $pendingRequests, self::REQUEST_TTL);
         }
     }
 

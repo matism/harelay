@@ -48,7 +48,8 @@ php artisan optimize:clear
 - **Tunnel Server**: Workerman WebSocket (ports 8081 + 8082)
 - **Database**: MySQL (production), SQLite (development/testing)
 - **Queue**: Database driver
-- **Cache/Session**: Database driver (file cache for tunnel IPC)
+- **Cache**: Redis (for both general caching and tunnel IPC)
+- **Session**: Database driver
 
 ### Database Tables
 
@@ -82,7 +83,7 @@ app/
 │   ├── Subscription.php
 │   └── DeviceCode.php                 # Device pairing codes
 ├── Services/
-│   └── TunnelManager.php              # File-cache IPC with tunnel server
+│   └── TunnelManager.php              # Redis-cache IPC with tunnel server
 └── Console/Commands/
     └── CreateTestConnection.php       # Creates test user/connection
 
@@ -110,17 +111,17 @@ The tunnel uses a Workerman-based WebSocket server that runs alongside Laravel:
 - **Port 8081**: Add-on connections (authentication, HTTP request/response relay)
 - **Port 8082**: Browser WebSocket proxy (for Home Assistant real-time features)
 
-Communication between Laravel web requests and the tunnel server uses file-based cache (`Cache::store('file')`) to avoid database connection issues in long-running processes.
+Communication between Laravel web requests and the tunnel server uses Redis cache (`Cache::store('redis')`) for fast, reliable IPC.
 
 ### Request Flow (HTTP)
 
 1. User visits `subdomain.harelay.com/path`
 2. `SubdomainProxy` middleware detects subdomain, calls `ProxyController`
 3. `ProxyController` verifies auth and ownership
-4. `TunnelManager::proxyRequest()` stores request in file cache
-5. `tunnel-server.php` polls cache, sends request to add-on via WebSocket
+4. `TunnelManager::proxyRequest()` stores request in Redis
+5. `tunnel-server.php` polls Redis, sends request to add-on via WebSocket
 6. Add-on forwards to Home Assistant, returns response via WebSocket
-7. `tunnel-server.php` stores response in file cache
+7. `tunnel-server.php` stores response in Redis
 8. `TunnelManager` retrieves response and returns to user
 
 ### Request Flow (WebSocket)
@@ -247,6 +248,10 @@ APP_PROXY_DOMAIN=harelay.com          # Domain for subdomains
 APP_PROXY_PORT=                       # Empty for production, 8000 for dev
 APP_PROXY_SECURE=true                 # Use HTTPS for proxy URLs
 SESSION_DOMAIN=.harelay.com           # Important for subdomain cookies
+
+# Redis (required for tunnel IPC)
+REDIS_HOST=127.0.0.1                  # Redis server host
+REDIS_PORT=6379                       # Redis server port
 
 # Tunnel Server (Workerman)
 TUNNEL_HOST=0.0.0.0                   # Bind address
