@@ -73,7 +73,7 @@ class TunnelManager
         $responseKey = $this->getResponseCacheKey($requestId);
         $maxWaitMicroseconds = self::REQUEST_TTL * 1000000;
         $waited = 0;
-        $interval = 50000; // Start at 50ms
+        $interval = 10000; // Start at 10ms for faster initial response
 
         while ($waited < $maxWaitMicroseconds) {
             $response = Cache::store('file')->get($responseKey);
@@ -87,7 +87,7 @@ class TunnelManager
 
             usleep($interval);
             $waited += $interval;
-            $interval = min((int) ($interval * 1.5), 200000); // Cap at 200ms
+            $interval = min((int) ($interval * 1.2), 100000); // Slower growth, cap at 100ms
         }
 
         // Timeout - clean up
