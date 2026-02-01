@@ -17,7 +17,8 @@ use Symfony\Component\HttpFoundation\Response;
 class SubdomainProxy
 {
     public function __construct(
-        private ProxyController $proxyController
+        private ProxyController $proxyController,
+        private ProxySecurityHeaders $securityHeaders
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -46,7 +47,9 @@ class SubdomainProxy
             $this->initializeSession($request);
         }
 
-        return $this->proxyController->handle($request, $subdomain);
+        // Apply security headers middleware to the proxy response
+        // This ensures cache headers and security headers are set correctly
+        return $this->securityHeaders->handle($request, fn () => $this->proxyController->handle($request, $subdomain));
     }
 
     /**
