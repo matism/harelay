@@ -42,6 +42,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/connection', [ConnectionController::class, 'destroy'])
         ->middleware('throttle:5,1') // 5 per minute
         ->name('connection.destroy');
+    Route::post('/connection/app-token', [ConnectionController::class, 'generateAppToken'])
+        ->middleware('throttle:5,1') // 5 per minute
+        ->name('connection.generate-app-token');
+    Route::delete('/connection/app-token', [ConnectionController::class, 'revokeAppToken'])
+        ->middleware('throttle:5,1') // 5 per minute
+        ->name('connection.revoke-app-token');
 
     // Profile (from Breeze)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

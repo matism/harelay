@@ -15,6 +15,7 @@ class HaConnection extends Model
         'user_id',
         'subdomain',
         'connection_token',
+        'app_token',
         'status',
         'last_connected_at',
         'bytes_in',
@@ -67,6 +68,22 @@ class HaConnection extends Model
     public static function generateConnectionToken(): string
     {
         return Str::random(64);
+    }
+
+    /**
+     * Generate a new app token for mobile app authentication.
+     */
+    public static function generateAppToken(): string
+    {
+        return Str::random(64);
+    }
+
+    /**
+     * Get the mobile app URL with authentication token.
+     */
+    public function getAppUrl(string $plainToken): string
+    {
+        return $this->getProxyUrl().'?app_token='.$plainToken;
     }
 
     /**

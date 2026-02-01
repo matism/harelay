@@ -105,4 +105,47 @@ class ConnectionController extends Controller
         return redirect()->route('dashboard.settings')
             ->with('success', 'Connection deleted successfully.');
     }
+
+    /**
+     * Generate or regenerate the mobile app token.
+     */
+    public function generateAppToken(Request $request): RedirectResponse
+    {
+        $connection = $request->user()->haConnection;
+
+        if (! $connection) {
+            return redirect()->route('dashboard.settings')
+                ->with('error', 'No connection found.');
+        }
+
+        $plainAppToken = HaConnection::generateAppToken();
+
+        $connection->update([
+            'app_token' => Hash::make($plainAppToken),
+        ]);
+
+        return redirect()->route('dashboard.settings')
+            ->with('plain_app_token', $plainAppToken)
+            ->with('success', 'Mobile app link generated successfully!');
+    }
+
+    /**
+     * Revoke the mobile app token.
+     */
+    public function revokeAppToken(Request $request): RedirectResponse
+    {
+        $connection = $request->user()->haConnection;
+
+        if (! $connection) {
+            return redirect()->route('dashboard.settings')
+                ->with('error', 'No connection found.');
+        }
+
+        $connection->update([
+            'app_token' => null,
+        ]);
+
+        return redirect()->route('dashboard.settings')
+            ->with('success', 'Mobile app link revoked successfully.');
+    }
 }

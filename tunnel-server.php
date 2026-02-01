@@ -74,6 +74,38 @@ function trackTraffic(string $subdomain, int $bytesIn = 0, int $bytesOut = 0): v
 }
 
 /**
+ * Authenticate via app token and verify ownership of subdomain.
+ * Returns user_id if valid, null otherwise.
+ */
+function authenticateAppToken(string $appToken, string $subdomain): ?int
+{
+    try {
+        DB::reconnect();
+
+        // Get connection with app_token for this subdomain
+        $connection = DB::table('ha_connections')
+            ->where('subdomain', $subdomain)
+            ->whereNotNull('app_token')
+            ->first();
+
+        if (! $connection) {
+            return null;
+        }
+
+        // Verify the app token
+        if (Hash::check($appToken, $connection->app_token)) {
+            return (int) $connection->user_id;
+        }
+
+        return null;
+    } catch (\Exception $e) {
+        tunnelLog("App token auth error: {$e->getMessage()}");
+
+        return null;
+    }
+}
+
+/**
  * Authenticate a session cookie and verify ownership of subdomain.
  * Returns user_id if valid, null otherwise.
  */
@@ -248,16 +280,23 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             return;
         }
 
-        // Authenticate via session cookie
-        $sessionCookie = $request->cookie(config('session.cookie', 'laravel_session'));
-        if (! $sessionCookie) {
-            tunnelLog("WS proxy: no session cookie for {$subdomain}");
-            $conn->close();
+        // Authenticate via session cookie or app token
+        $userId = null;
 
-            return;
+        // Try session cookie first
+        $sessionCookie = $request->cookie(config('session.cookie', 'laravel_session'));
+        if ($sessionCookie) {
+            $userId = authenticateSession($sessionCookie, $subdomain);
         }
 
-        $userId = authenticateSession($sessionCookie, $subdomain);
+        // Fall back to app token from query string
+        if (! $userId) {
+            $appToken = $request->get('app_token');
+            if ($appToken) {
+                $userId = authenticateAppToken($appToken, $subdomain);
+            }
+        }
+
         if (! $userId) {
             tunnelLog("WS proxy: auth failed for {$subdomain}");
             $conn->close();

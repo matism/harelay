@@ -54,7 +54,7 @@ php artisan optimize:clear
 ### Database Tables
 
 - `users` - User accounts (Breeze), includes `can_set_subdomain` flag for custom subdomain permission
-- `ha_connections` - User's HA connection (subdomain, token, status, last_connected_at, bytes_in, bytes_out)
+- `ha_connections` - User's HA connection (subdomain, connection_token, app_token, status, last_connected_at, bytes_in, bytes_out)
 - `subscriptions` - User subscription plans
 - `device_codes` - Device pairing codes for add-on setup (expires after 15 minutes)
 - `daily_traffic` - Daily traffic statistics per connection (ha_connection_id, date, bytes_in, bytes_out)
@@ -297,6 +297,17 @@ For Supervisor API endpoints, the add-on forwards the user's original Authorizat
 - Security headers on proxy responses (X-Robots-Tag, X-Frame-Options)
 - Device codes expire after 15 minutes
 - Plain tokens stored temporarily in device_codes, cleared after first poll
+- App tokens are hashed (bcrypt) in database, shown only once when generated
+
+### Mobile App Authentication
+
+For the Home Assistant mobile app, users can generate a special URL with an embedded app token:
+
+- **URL format**: `https://subdomain.harelay.com?app_token=TOKEN`
+- **Token storage**: Hashed in `ha_connections.app_token` column
+- **Auth flow**: ProxyController and WebSocket proxy check for `app_token` query parameter or `X-App-Token` header
+- **Dashboard**: Users can generate/revoke tokens from Settings page
+- **Security warning**: Users are warned not to share this URL as it provides direct access without login
 
 ## Data Transfer Tracking
 

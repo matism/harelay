@@ -6,6 +6,7 @@ use App\Models\HaConnection;
 use App\Services\TunnelManager;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Hash;
 
 class ProxyController extends Controller
 {
@@ -33,8 +34,18 @@ class ProxyController extends Controller
             return response()->view('errors.not-found', [], 404);
         }
 
-        // Check authentication
-        if (! $request->user()) {
+        // Check authentication - session-based or app token
+        $appToken = $request->query('app_token') ?? $request->header('X-App-Token');
+        $authenticatedViaToken = false;
+
+        if ($appToken && $connection->app_token) {
+            // Verify app token
+            if (Hash::check($appToken, $connection->app_token)) {
+                $authenticatedViaToken = true;
+            }
+        }
+
+        if (! $authenticatedViaToken && ! $request->user()) {
             session(['url.intended' => $request->fullUrl()]);
 
             return response()->view('errors.auth-required', [
@@ -42,8 +53,8 @@ class ProxyController extends Controller
             ], 401);
         }
 
-        // Check authorization
-        if ($request->user()->id !== $connection->user_id) {
+        // Check authorization (only for session-based auth, token auth is already verified)
+        if (! $authenticatedViaToken && $request->user()->id !== $connection->user_id) {
             return response()->view('errors.unauthorized', [
                 'connection' => $connection,
             ], 403);
