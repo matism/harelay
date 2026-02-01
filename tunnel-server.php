@@ -74,34 +74,47 @@ function trackTraffic(string $subdomain, int $bytesIn = 0, int $bytesOut = 0): v
 }
 
 /**
- * Authenticate via app token and verify ownership of subdomain.
- * Returns user_id if valid, null otherwise.
+ * Find a connection by subdomain (regular or app).
+ * Returns [connection, is_app_subdomain, tunnel_subdomain] or [null, false, null] if not found.
+ *
+ * @return array{connection: object|null, is_app_subdomain: bool, tunnel_subdomain: string|null}
  */
-function authenticateAppToken(string $appToken, string $subdomain): ?int
+function findConnectionBySubdomain(string $subdomain): array
 {
     try {
         DB::reconnect();
 
-        // Get connection with app_token for this subdomain
+        // First check regular subdomain (more common case)
         $connection = DB::table('ha_connections')
             ->where('subdomain', $subdomain)
-            ->whereNotNull('app_token')
             ->first();
 
-        if (! $connection) {
-            return null;
+        if ($connection) {
+            return [
+                'connection' => $connection,
+                'is_app_subdomain' => false,
+                'tunnel_subdomain' => $connection->subdomain,
+            ];
         }
 
-        // Verify the app token
-        if (Hash::check($appToken, $connection->app_token)) {
-            return (int) $connection->user_id;
+        // Then check app_subdomain
+        $connection = DB::table('ha_connections')
+            ->where('app_subdomain', $subdomain)
+            ->first();
+
+        if ($connection) {
+            return [
+                'connection' => $connection,
+                'is_app_subdomain' => true,
+                'tunnel_subdomain' => $connection->subdomain,
+            ];
         }
 
-        return null;
+        return ['connection' => null, 'is_app_subdomain' => false, 'tunnel_subdomain' => null];
     } catch (\Exception $e) {
-        tunnelLog("App token auth error: {$e->getMessage()}");
+        tunnelLog("Find connection error: {$e->getMessage()}");
 
-        return null;
+        return ['connection' => null, 'is_app_subdomain' => false, 'tunnel_subdomain' => null];
     }
 }
 
@@ -253,11 +266,11 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
     // Transparent WebSocket authentication via session cookie during HTTP upgrade
     $wsProxy->onWebSocketConnect = function (TcpConnection $conn, $request) use (&$addonConnections) {
-        // Extract subdomain from Host header
+        // Extract subdomain from Host header (supports 16 or 32 char subdomains)
         $host = $request->host();
         $proxyDomain = config('app.proxy_domain', 'harelay.com');
 
-        if (! preg_match('/^([a-z0-9]+)\.'.preg_quote($proxyDomain, '/').'$/i', $host, $matches)) {
+        if (! preg_match('/^([a-z0-9]{8,32})\.'.preg_quote($proxyDomain, '/').'$/i', $host, $matches)) {
             tunnelLog("WS proxy: invalid host: {$host}");
             $conn->close();
 
@@ -272,29 +285,48 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             return;
         }
 
-        // Check tunnel connected
-        if (! isset($addonConnections[$subdomain])) {
-            tunnelLog("WS proxy: tunnel not connected for {$subdomain}");
+        // Find connection by subdomain or app_subdomain
+        [
+            'connection' => $connection,
+            'is_app_subdomain' => $isAppSubdomain,
+            'tunnel_subdomain' => $tunnelSubdomain,
+        ] = findConnectionBySubdomain($subdomain);
+
+        if (! $connection) {
+            tunnelLog("WS proxy: connection not found for {$subdomain}");
             $conn->close();
 
             return;
         }
 
-        // Authenticate via session cookie or app token
-        $userId = null;
+        // Check tunnel connected (using the regular subdomain, not app_subdomain)
+        if (! isset($addonConnections[$tunnelSubdomain])) {
+            tunnelLog("WS proxy: tunnel not connected for {$tunnelSubdomain}");
+            $conn->close();
 
-        // Try session cookie first
+            return;
+        }
+
+        // App subdomain access - no authentication required (URL is the auth)
+        if ($isAppSubdomain) {
+            $conn->subdomain = $subdomain;
+            $conn->tunnelSubdomain = $tunnelSubdomain;
+            $conn->path = $path;
+            $conn->userId = $connection->user_id;
+            $conn->authenticated = true;
+            $conn->streamId = bin2hex(random_bytes(16));
+            $conn->transparentAuth = true;
+
+            tunnelLog("WS proxy: app_subdomain access {$subdomain} -> {$tunnelSubdomain}", true);
+
+            return;
+        }
+
+        // Regular subdomain - authenticate via session cookie
+        $userId = null;
         $sessionCookie = $request->cookie(config('session.cookie', 'laravel_session'));
         if ($sessionCookie) {
             $userId = authenticateSession($sessionCookie, $subdomain);
-        }
-
-        // Fall back to app token from query string
-        if (! $userId) {
-            $appToken = $request->get('app_token');
-            if ($appToken) {
-                $userId = authenticateAppToken($appToken, $subdomain);
-            }
         }
 
         if (! $userId) {
@@ -306,6 +338,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
         // Mark as authenticated
         $conn->subdomain = $subdomain;
+        $conn->tunnelSubdomain = $tunnelSubdomain;
         $conn->path = $path;
         $conn->userId = $userId;
         $conn->authenticated = true;
@@ -317,35 +350,36 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
     // Set up stream after transparent auth handshake completes
     $wsProxy->onWebSocketConnected = function (TcpConnection $conn, $request) use (&$addonConnections, &$browserWsConnections, &$addonWsStreams) {
-        // Only for transparent auth (cookie-based)
+        // Only for transparent auth (cookie-based or app_subdomain)
         if (! ($conn->transparentAuth ?? false)) {
             return;
         }
 
-        $subdomain = $conn->subdomain;
+        // Use tunnel subdomain for add-on communication (regular subdomain, not app_subdomain)
+        $tunnelSubdomain = $conn->tunnelSubdomain ?? $conn->subdomain;
 
-        if (! isset($browserWsConnections[$subdomain])) {
-            $browserWsConnections[$subdomain] = [];
+        if (! isset($browserWsConnections[$tunnelSubdomain])) {
+            $browserWsConnections[$tunnelSubdomain] = [];
         }
-        if (! isset($addonWsStreams[$subdomain])) {
-            $addonWsStreams[$subdomain] = [];
+        if (! isset($addonWsStreams[$tunnelSubdomain])) {
+            $addonWsStreams[$tunnelSubdomain] = [];
         }
 
-        $browserWsConnections[$subdomain][$conn->id] = $conn;
-        $addonWsStreams[$subdomain][$conn->streamId] = $conn->id;
+        $browserWsConnections[$tunnelSubdomain][$conn->id] = $conn;
+        $addonWsStreams[$tunnelSubdomain][$conn->streamId] = $conn->id;
 
         // Tell add-on to open WebSocket to HA
-        $addonConnections[$subdomain]->send(json_encode([
+        $addonConnections[$tunnelSubdomain]->send(json_encode([
             'type' => 'ws_open',
             'stream_id' => $conn->streamId,
             'path' => $conn->path,
         ]));
 
-        tunnelLog("WS proxy: stream opened {$subdomain} (stream={$conn->streamId})", true);
+        tunnelLog("WS proxy: stream opened {$tunnelSubdomain} (stream={$conn->streamId})", true);
     };
 
     $wsProxy->onMessage = function (TcpConnection $conn, $data) use (&$addonConnections, &$browserWsConnections, &$addonWsStreams) {
-        // First message must be authentication
+        // First message must be authentication (legacy /wss path)
         if (! $conn->authenticated) {
             $message = json_decode($data, true);
 
@@ -367,9 +401,24 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
                 return;
             }
 
-            // Check if add-on is connected
-            if (! isset($addonConnections[$subdomain])) {
-                tunnelLog("WS proxy: auth failed - tunnel not connected for {$subdomain}");
+            // Find connection by subdomain or app_subdomain
+            [
+                'connection' => $connection,
+                'is_app_subdomain' => $isAppSubdomain,
+                'tunnel_subdomain' => $tunnelSubdomain,
+            ] = findConnectionBySubdomain($subdomain);
+
+            if (! $connection) {
+                tunnelLog("WS proxy: connection not found for {$subdomain}");
+                $conn->send(json_encode(['type' => 'error', 'error' => 'Connection not found']));
+                $conn->close();
+
+                return;
+            }
+
+            // Check if add-on is connected (using tunnel subdomain)
+            if (! isset($addonConnections[$tunnelSubdomain])) {
+                tunnelLog("WS proxy: auth failed - tunnel not connected for {$tunnelSubdomain}");
                 $conn->send(json_encode(['type' => 'error', 'error' => 'Tunnel not connected']));
                 $conn->close();
 
@@ -377,26 +426,27 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             }
 
             $conn->subdomain = $subdomain;
+            $conn->tunnelSubdomain = $tunnelSubdomain;
             $conn->streamId = bin2hex(random_bytes(16));
             $conn->authenticated = true;
 
-            // Initialize subdomain arrays if needed
-            if (! isset($browserWsConnections[$subdomain])) {
-                $browserWsConnections[$subdomain] = [];
+            // Initialize subdomain arrays if needed (using tunnel subdomain)
+            if (! isset($browserWsConnections[$tunnelSubdomain])) {
+                $browserWsConnections[$tunnelSubdomain] = [];
             }
-            if (! isset($addonWsStreams[$subdomain])) {
-                $addonWsStreams[$subdomain] = [];
+            if (! isset($addonWsStreams[$tunnelSubdomain])) {
+                $addonWsStreams[$tunnelSubdomain] = [];
             }
 
             // Register connections
-            $browserWsConnections[$subdomain][$conn->id] = $conn;
-            $addonWsStreams[$subdomain][$conn->streamId] = $conn->id;
+            $browserWsConnections[$tunnelSubdomain][$conn->id] = $conn;
+            $addonWsStreams[$tunnelSubdomain][$conn->streamId] = $conn->id;
 
-            $streamCount = count($addonWsStreams[$subdomain]);
-            tunnelLog("WS proxy: authenticated {$subdomain} (stream={$conn->streamId}, total streams={$streamCount})", true);
+            $streamCount = count($addonWsStreams[$tunnelSubdomain]);
+            tunnelLog("WS proxy: authenticated {$subdomain} -> {$tunnelSubdomain} (stream={$conn->streamId}, total streams={$streamCount})", true);
 
             // Tell add-on to open WebSocket to HA
-            $addonConnections[$subdomain]->send(json_encode([
+            $addonConnections[$tunnelSubdomain]->send(json_encode([
                 'type' => 'ws_open',
                 'stream_id' => $conn->streamId,
                 'path' => $path,
@@ -405,12 +455,13 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             return;
         }
 
-        // Forward subsequent messages to add-on
-        if (isset($addonConnections[$conn->subdomain])) {
+        // Forward subsequent messages to add-on (using tunnel subdomain)
+        $tunnelSubdomain = $conn->tunnelSubdomain ?? $conn->subdomain;
+        if (isset($addonConnections[$tunnelSubdomain])) {
             // Track incoming WebSocket bytes
-            trackTraffic($conn->subdomain, strlen($data), 0);
+            trackTraffic($tunnelSubdomain, strlen($data), 0);
 
-            $addonConnections[$conn->subdomain]->send(json_encode([
+            $addonConnections[$tunnelSubdomain]->send(json_encode([
                 'type' => 'ws_message',
                 'stream_id' => $conn->streamId,
                 'message' => $data,
@@ -423,19 +474,22 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             return;
         }
 
+        // Use tunnel subdomain for add-on communication
+        $tunnelSubdomain = $conn->tunnelSubdomain ?? $conn->subdomain;
+
         tunnelLog("WS proxy: browser disconnected {$conn->subdomain} (stream={$conn->streamId})", true);
 
         // Tell add-on to close HA WebSocket
-        if (isset($addonConnections[$conn->subdomain])) {
-            $addonConnections[$conn->subdomain]->send(json_encode([
+        if (isset($addonConnections[$tunnelSubdomain])) {
+            $addonConnections[$tunnelSubdomain]->send(json_encode([
                 'type' => 'ws_close',
                 'stream_id' => $conn->streamId,
             ]));
         }
 
         // Cleanup
-        unset($browserWsConnections[$conn->subdomain][$conn->id]);
-        unset($addonWsStreams[$conn->subdomain][$conn->streamId]);
+        unset($browserWsConnections[$tunnelSubdomain][$conn->id]);
+        unset($addonWsStreams[$tunnelSubdomain][$conn->streamId]);
     };
 
     $wsProxy->listen();

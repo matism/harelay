@@ -104,98 +104,105 @@
                     </div>
                 </div>
 
-                <!-- Mobile App Link -->
+                <!-- Mobile App URL -->
                 <div id="mobile-app" class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl rounded-2xl border border-white/20 scroll-mt-6">
                     <div class="p-6 sm:p-8">
-                        <h3 class="text-lg font-semibold text-white mb-1">Mobile App Link</h3>
+                        <h3 class="text-lg font-semibold text-white mb-1">Mobile App URL</h3>
                         <p class="text-slate-400 text-sm mb-6">
-                            Use this special link to connect the Home Assistant mobile app without browser login.
+                            Use this URL to connect the Home Assistant mobile app without browser login.
                         </p>
 
-                        <!-- Security Warning -->
-                        <div class="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
-                            <div class="flex">
-                                <svg class="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                </svg>
-                                <div class="ml-3">
-                                    <p class="text-sm font-medium text-red-400 mb-1">Keep this link private!</p>
-                                    <p class="text-sm text-red-300/80">
-                                        Anyone with this link can access your Home Assistant without logging in.
-                                        Do not share it publicly or with untrusted parties.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        @if(session('plain_app_token'))
-                            <!-- Show the token once -->
-                            <div class="bg-green-500/10 border border-green-500/20 rounded-xl p-4 mb-6">
-                                <div class="flex items-start">
-                                    <svg class="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        @if($connection->app_subdomain)
+                            <!-- Security Warning -->
+                            <div class="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
+                                <div class="flex">
+                                    <svg class="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                                     </svg>
-                                    <div class="ml-3 flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-green-400 mb-2">Your mobile app link is ready!</p>
-                                        <p class="text-xs text-slate-400 mb-3">Copy this link now - it won't be shown again for security reasons.</p>
-                                        <div class="flex flex-col gap-2">
-                                            <input type="text" readonly value="{{ $connection->getAppUrl(session('plain_app_token')) }}"
-                                                id="appUrl"
-                                                class="w-full rounded-lg border-0 bg-white/10 text-green-300 shadow-sm ring-1 ring-inset ring-green-500/30 text-sm px-3 py-2 font-mono break-all">
-                                            <button onclick="navigator.clipboard.writeText(document.getElementById('appUrl').value); this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy Link', 2000)"
-                                                class="inline-flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-500 border border-transparent rounded-lg text-sm font-medium text-white transition whitespace-nowrap">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                                                </svg>
-                                                Copy Link
-                                            </button>
-                                        </div>
+                                    <div class="ml-3">
+                                        <p class="text-sm font-medium text-red-400 mb-1">Keep this URL private!</p>
+                                        <p class="text-sm text-red-300/80">
+                                            Anyone with this URL can access your Home Assistant without logging in.
+                                            Do not share it publicly or with untrusted parties.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
-                        @endif
 
-                        @if($connection->app_token)
-                            <div class="flex flex-col sm:flex-row gap-3">
-                                <form action="{{ route('connection.generate-app-token') }}" method="POST">
-                                    @csrf
-                                    <button type="submit" onclick="return confirm('This will invalidate your current mobile app link. Any apps using it will need to be reconfigured. Continue?')"
-                                        class="inline-flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-500 border border-transparent rounded-lg text-sm font-medium text-white transition">
-                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                        </svg>
-                                        Regenerate Link
-                                    </button>
-                                </form>
-                                <form action="{{ route('connection.revoke-app-token') }}" method="POST">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" onclick="return confirm('This will revoke your mobile app link. Any apps using it will no longer have access. Continue?')"
-                                        class="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-sm font-medium text-white transition">
-                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
-                                        </svg>
-                                        Revoke Link
-                                    </button>
-                                </form>
+                            <!-- App URL (no login required) -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-300 mb-2">Mobile App URL (no login required)</label>
+                                    <div class="flex flex-col sm:flex-row gap-2">
+                                        <input type="text" readonly value="{{ $connection->getAppProxyUrl() }}"
+                                            id="appUrl"
+                                            class="flex-1 min-w-0 rounded-lg border-0 bg-white/5 text-cyan-400 shadow-sm ring-1 ring-inset ring-white/10 text-sm px-4 py-3 font-mono break-all">
+                                        <button onclick="navigator.clipboard.writeText(document.getElementById('appUrl').value); this.innerHTML = '<svg class=\'w-4 h-4 mr-2\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M5 13l4 4L19 7\'></path></svg>Copied!'; setTimeout(() => this.innerHTML = '<svg class=\'w-4 h-4 mr-2\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z\'></path></svg>Copy', 2000)"
+                                            class="inline-flex items-center justify-center px-4 py-3 bg-cyan-500 hover:bg-cyan-400 border border-transparent rounded-lg text-sm font-medium text-slate-900 transition whitespace-nowrap">
+                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                            </svg>
+                                            Copy
+                                        </button>
+                                    </div>
+                                    <p class="mt-2 text-xs text-slate-500">
+                                        Use this URL in the Home Assistant Companion app's "External URL" field.
+                                    </p>
+                                </div>
+
+                                <div class="pt-4 border-t border-white/10 flex flex-wrap gap-2">
+                                    <form action="{{ route('connection.generate-app-subdomain') }}" method="POST" class="inline">
+                                        @csrf
+                                        <button type="submit" onclick="return confirm('This will invalidate your current mobile app URL. Any apps using it will need to be reconfigured with the new URL. Continue?')"
+                                            class="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-sm font-medium text-white transition">
+                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                            </svg>
+                                            Regenerate URL
+                                        </button>
+                                    </form>
+                                    <form action="{{ route('connection.revoke-app-subdomain') }}" method="POST" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" onclick="return confirm('This will disable mobile app access. You can generate a new URL later if needed. Continue?')"
+                                            class="inline-flex items-center px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-sm font-medium text-red-400 transition">
+                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                                            </svg>
+                                            Revoke Access
+                                        </button>
+                                    </form>
+                                </div>
+                                <p class="text-xs text-slate-500">
+                                    If you suspect your URL has been compromised, regenerate it. Or revoke access entirely if you no longer need mobile app access.
+                                </p>
                             </div>
-                            <p class="mt-3 text-xs text-slate-500">
-                                A mobile app link has been generated. If you've lost it, you can regenerate a new one.
-                            </p>
                         @else
-                            <form action="{{ route('connection.generate-app-token') }}" method="POST">
+                            <!-- No App URL - Show Generate Button -->
+                            <div class="bg-slate-500/10 border border-slate-500/20 rounded-xl p-4 mb-6">
+                                <div class="flex">
+                                    <svg class="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <div class="ml-3">
+                                        <p class="text-sm text-slate-300">
+                                            Generate a special URL that allows the Home Assistant mobile app to connect without requiring browser login.
+                                            This URL will be long and unguessable for security.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form action="{{ route('connection.generate-app-subdomain') }}" method="POST">
                                 @csrf
                                 <button type="submit"
-                                    class="inline-flex items-center px-4 py-2 bg-cyan-500 hover:bg-cyan-400 border border-transparent rounded-lg text-sm font-medium text-slate-900 transition">
+                                    class="inline-flex items-center px-4 py-3 bg-cyan-500 hover:bg-cyan-400 border border-transparent rounded-lg text-sm font-medium text-slate-900 transition">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                     </svg>
-                                    Generate Mobile App Link
+                                    Generate Mobile App URL
                                 </button>
                             </form>
-                            <p class="mt-3 text-xs text-slate-500">
-                                Generate a special link for the Home Assistant mobile app that doesn't require browser login.
-                            </p>
                         @endif
                     </div>
                 </div>

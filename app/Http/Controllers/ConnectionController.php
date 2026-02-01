@@ -73,9 +73,10 @@ class ConnectionController extends Controller
                 'required',
                 'string',
                 'min:3',
-                'max:32',
+                'max:20',  // Shorter max to distinguish from 32-char app_subdomains
                 'regex:/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/',
                 'unique:ha_connections,subdomain,'.$connection->id,
+                'unique:ha_connections,app_subdomain',  // Can't collide with any app_subdomain
             ],
         ], [
             'subdomain.regex' => 'Subdomain must contain only lowercase letters, numbers, and hyphens. It cannot start or end with a hyphen.',
@@ -107,9 +108,9 @@ class ConnectionController extends Controller
     }
 
     /**
-     * Generate or regenerate the mobile app token.
+     * Generate or regenerate the app subdomain for mobile app access.
      */
-    public function generateAppToken(Request $request): RedirectResponse
+    public function generateAppSubdomain(Request $request): RedirectResponse
     {
         $connection = $request->user()->haConnection;
 
@@ -118,21 +119,24 @@ class ConnectionController extends Controller
                 ->with('error', 'No connection found.');
         }
 
-        $plainAppToken = HaConnection::generateAppToken();
+        $isNew = ! $connection->app_subdomain;
 
         $connection->update([
-            'app_token' => Hash::make($plainAppToken),
+            'app_subdomain' => HaConnection::generateAppSubdomain(),
         ]);
 
+        $message = $isNew
+            ? 'Mobile app URL generated successfully!'
+            : 'Mobile app URL regenerated successfully! Update the URL in your Home Assistant app.';
+
         return redirect()->route('dashboard.settings')
-            ->with('plain_app_token', $plainAppToken)
-            ->with('success', 'Mobile app link generated successfully!');
+            ->with('success', $message);
     }
 
     /**
-     * Revoke the mobile app token.
+     * Revoke the app subdomain, disabling mobile app access.
      */
-    public function revokeAppToken(Request $request): RedirectResponse
+    public function revokeAppSubdomain(Request $request): RedirectResponse
     {
         $connection = $request->user()->haConnection;
 
@@ -142,10 +146,10 @@ class ConnectionController extends Controller
         }
 
         $connection->update([
-            'app_token' => null,
+            'app_subdomain' => null,
         ]);
 
         return redirect()->route('dashboard.settings')
-            ->with('success', 'Mobile app link revoked successfully.');
+            ->with('success', 'Mobile app URL revoked. Apps using it will no longer have access.');
     }
 }

@@ -6,7 +6,6 @@ use App\Models\HaConnection;
 use App\Services\TunnelManager;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Hash;
 
 class ProxyController extends Controller
 {
@@ -28,40 +27,35 @@ class ProxyController extends Controller
             );
         }
 
-        $connection = HaConnection::where('subdomain', $subdomain)->first();
+        // Find connection by either regular subdomain or app_subdomain
+        ['connection' => $connection, 'is_app_subdomain' => $isAppSubdomain] = HaConnection::findBySubdomain($subdomain);
 
         if (! $connection) {
             return response()->view('errors.not-found', [], 404);
         }
 
-        // Check authentication - session-based or app token
-        $appToken = $request->query('app_token') ?? $request->header('X-App-Token');
-        $authenticatedViaToken = false;
+        // App subdomain access - no authentication required (URL is the auth)
+        // Regular subdomain access - requires login
+        if (! $isAppSubdomain) {
+            if (! $request->user()) {
+                session(['url.intended' => $request->fullUrl()]);
 
-        if ($appToken && $connection->app_token) {
-            // Verify app token
-            if (Hash::check($appToken, $connection->app_token)) {
-                $authenticatedViaToken = true;
+                return response()->view('errors.auth-required', [
+                    'connection' => $connection,
+                ], 401);
+            }
+
+            // Check authorization - user must own this connection
+            if ($request->user()->id !== $connection->user_id) {
+                return response()->view('errors.unauthorized', [
+                    'connection' => $connection,
+                ], 403);
             }
         }
 
-        if (! $authenticatedViaToken && ! $request->user()) {
-            session(['url.intended' => $request->fullUrl()]);
-
-            return response()->view('errors.auth-required', [
-                'connection' => $connection,
-            ], 401);
-        }
-
-        // Check authorization (only for session-based auth, token auth is already verified)
-        if (! $authenticatedViaToken && $request->user()->id !== $connection->user_id) {
-            return response()->view('errors.unauthorized', [
-                'connection' => $connection,
-            ], 403);
-        }
-
-        // Check tunnel connection
-        if (! $this->tunnelManager->isConnected($subdomain)) {
+        // Check tunnel connection (always uses the regular subdomain for tunnel operations)
+        $tunnelSubdomain = $connection->subdomain;
+        if (! $this->tunnelManager->isConnected($tunnelSubdomain)) {
             return response()->view('errors.tunnel-disconnected', [
                 'connection' => $connection,
             ], 503);
@@ -81,9 +75,9 @@ class ProxyController extends Controller
             unset($headers['Content-Type']);
         }
 
-        // Proxy the request
+        // Proxy the request (using tunnel subdomain)
         $response = $this->tunnelManager->proxyRequest(
-            subdomain: $subdomain,
+            subdomain: $tunnelSubdomain,
             method: $method,
             uri: $uri,
             headers: $headers,
@@ -96,6 +90,7 @@ class ProxyController extends Controller
             ], 504);
         }
 
+        // Use the original subdomain for cookie domain (app or regular)
         return $this->buildResponse($response, $subdomain);
     }
 
@@ -208,12 +203,12 @@ class ProxyController extends Controller
 
             // Parse the cookie value
             if (preg_match('/^ingress_session=([^;]+)/', $cookie, $matches)) {
-                $value = $matches[1];
+                $value = trim($matches[1]);
 
                 // Extract Path if present (usually /api/hassio_ingress/)
                 $path = '/';
                 if (preg_match('/Path=([^;]+)/i', $cookie, $pathMatches)) {
-                    $path = $pathMatches[1];
+                    $path = trim($pathMatches[1]);
                 }
 
                 // Set the cookie with HARelay domain

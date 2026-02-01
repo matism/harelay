@@ -14,8 +14,8 @@ class HaConnection extends Model
     protected $fillable = [
         'user_id',
         'subdomain',
+        'app_subdomain',
         'connection_token',
-        'app_token',
         'status',
         'last_connected_at',
         'bytes_in',
@@ -40,12 +40,52 @@ class HaConnection extends Model
     }
 
     /**
-     * Get the full proxy URL for this connection.
+     * Find a connection by subdomain (regular or app).
+     * Returns the connection and whether it was found via app_subdomain.
+     *
+     * @return array{connection: HaConnection|null, is_app_subdomain: bool}
+     */
+    public static function findBySubdomain(string $subdomain): array
+    {
+        // First check regular subdomain (more common case)
+        $connection = self::where('subdomain', $subdomain)->first();
+        if ($connection) {
+            return ['connection' => $connection, 'is_app_subdomain' => false];
+        }
+
+        // Then check app_subdomain
+        $connection = self::where('app_subdomain', $subdomain)->first();
+        if ($connection) {
+            return ['connection' => $connection, 'is_app_subdomain' => true];
+        }
+
+        return ['connection' => null, 'is_app_subdomain' => false];
+    }
+
+    /**
+     * Get the full proxy URL for this connection (requires login).
      */
     public function getProxyUrl(): string
     {
+        return $this->buildProxyUrl($this->subdomain);
+    }
+
+    /**
+     * Get the app proxy URL for this connection (no login required).
+     * Uses the long app_subdomain for security.
+     */
+    public function getAppProxyUrl(): string
+    {
+        return $this->buildProxyUrl($this->app_subdomain);
+    }
+
+    /**
+     * Build a proxy URL with the given subdomain.
+     */
+    private function buildProxyUrl(string $subdomain): string
+    {
         $scheme = config('app.proxy_secure') ? 'https' : 'http';
-        $domain = $this->subdomain.'.'.config('app.proxy_domain');
+        $domain = $subdomain.'.'.config('app.proxy_domain');
         $port = config('app.proxy_port');
 
         if ($port && $port !== 80 && $port !== 443) {
@@ -58,9 +98,24 @@ class HaConnection extends Model
     public static function generateSubdomain(): string
     {
         do {
-            // 16 characters = 36^16 ≈ 7.9 * 10^24 combinations (virtually impossible to brute force)
-            $subdomain = Str::lower(Str::random(16));
-        } while (self::where('subdomain', $subdomain)->exists());
+            // 8 characters = 36^8 ≈ 2.8 * 10^12 combinations
+            $subdomain = Str::lower(Str::random(8));
+            // Ensure no collision with app_subdomains
+        } while (self::where('subdomain', $subdomain)->orWhere('app_subdomain', $subdomain)->exists());
+
+        return $subdomain;
+    }
+
+    /**
+     * Generate a unique 32-character app subdomain for mobile app access.
+     */
+    public static function generateAppSubdomain(): string
+    {
+        do {
+            // 32 characters = 36^32 ≈ 6.3 * 10^49 combinations (impossible to brute force)
+            $subdomain = Str::lower(Str::random(32));
+            // Ensure no collision with regular subdomains or other app_subdomains
+        } while (self::where('subdomain', $subdomain)->orWhere('app_subdomain', $subdomain)->exists());
 
         return $subdomain;
     }
@@ -68,22 +123,6 @@ class HaConnection extends Model
     public static function generateConnectionToken(): string
     {
         return Str::random(64);
-    }
-
-    /**
-     * Generate a new app token for mobile app authentication.
-     */
-    public static function generateAppToken(): string
-    {
-        return Str::random(64);
-    }
-
-    /**
-     * Get the mobile app URL with authentication token.
-     */
-    public function getAppUrl(string $plainToken): string
-    {
-        return $this->getProxyUrl().'?app_token='.$plainToken;
     }
 
     /**

@@ -5,7 +5,6 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceLinkController;
 use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ProxyController;
 use Illuminate\Support\Facades\Route;
 
 // Marketing routes
@@ -42,12 +41,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/connection', [ConnectionController::class, 'destroy'])
         ->middleware('throttle:5,1') // 5 per minute
         ->name('connection.destroy');
-    Route::post('/connection/app-token', [ConnectionController::class, 'generateAppToken'])
+    Route::post('/connection/app-subdomain', [ConnectionController::class, 'generateAppSubdomain'])
         ->middleware('throttle:5,1') // 5 per minute
-        ->name('connection.generate-app-token');
-    Route::delete('/connection/app-token', [ConnectionController::class, 'revokeAppToken'])
+        ->name('connection.generate-app-subdomain');
+    Route::delete('/connection/app-subdomain', [ConnectionController::class, 'revokeAppSubdomain'])
         ->middleware('throttle:5,1') // 5 per minute
-        ->name('connection.revoke-app-token');
+        ->name('connection.revoke-app-subdomain');
 
     // Profile (from Breeze)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -55,15 +54,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Subdomain proxy routes (for production with nginx/apache)
-// Note: In local development, SubdomainProxy middleware handles this instead
-// because php artisan serve doesn't support Route::domain() properly
-Route::domain('{subdomain}.'.config('app.proxy_domain', 'harelay.com'))
-    ->middleware(['web', 'proxy.security'])
-    ->group(function () {
-        Route::any('/{path?}', [ProxyController::class, 'handle'])
-            ->where('path', '.*')
-            ->name('proxy.handle');
-    });
+// Note: Subdomain proxy requests are handled by SubdomainProxy middleware
+// which is prepended to the global middleware stack in bootstrap/app.php
 
 require __DIR__.'/auth.php';

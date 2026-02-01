@@ -54,7 +54,7 @@ php artisan optimize:clear
 ### Database Tables
 
 - `users` - User accounts (Breeze), includes `can_set_subdomain` flag for custom subdomain permission
-- `ha_connections` - User's HA connection (subdomain, connection_token, app_token, status, last_connected_at, bytes_in, bytes_out)
+- `ha_connections` - User's HA connection (subdomain, app_subdomain [optional], connection_token, status, last_connected_at, bytes_in, bytes_out)
 - `subscriptions` - User subscription plans
 - `device_codes` - Device pairing codes for add-on setup (expires after 15 minutes)
 - `daily_traffic` - Daily traffic statistics per connection (ha_connection_id, date, bytes_in, bytes_out)
@@ -74,7 +74,7 @@ app/
 │   ├── Controllers/Api/
 │   │   └── DeviceCodeController.php   # Device code API endpoints
 │   └── Middleware/
-│       ├── SubdomainProxy.php         # Subdomain detection (local dev)
+│       ├── SubdomainProxy.php         # Subdomain detection and proxy routing
 │       ├── ProxySecurityHeaders.php   # Security headers for proxied responses
 │       └── CheckSubscription.php
 ├── Models/
@@ -286,23 +286,33 @@ Two WebSocket paths are proxied to the tunnel server (see `DEPLOYMENT.md` for fu
 - Users must be authenticated to access their subdomain
 - Owner verification on all proxy requests
 - Subdomain sanitization: `preg_replace('/[^a-z0-9]/', '', $subdomain)`
-- Subdomains are 16 characters (36^16 ≈ 7.9 × 10^24 combinations) to prevent brute-force
+- Regular subdomains are 8 characters (requires login, so length is less critical)
+- App subdomains are 32 characters (36^32 combinations) - no login required, URL is the auth
 - WebSocket path validation: only `/api/websocket` path allowed for transparent proxy
 - Stream IDs use cryptographically secure random bytes
 - Security headers on proxy responses (X-Robots-Tag, X-Frame-Options)
 - Device codes expire after 15 minutes
 - Plain tokens stored temporarily in device_codes, cleared after first poll
-- App tokens are hashed (bcrypt) in database, shown only once when generated
+- App subdomains are 32 chars (36^32 combinations) - impossible to brute force
 
-### Mobile App Authentication
+### Mobile App Access (Dual Subdomain)
 
-For the Home Assistant mobile app, users can generate a special URL with an embedded app token:
+Each connection can have two subdomains for different access modes:
 
-- **URL format**: `https://subdomain.harelay.com?app_token=TOKEN`
-- **Token storage**: Hashed in `ha_connections.app_token` column
-- **Auth flow**: ProxyController and WebSocket proxy check for `app_token` query parameter or `X-App-Token` header
-- **Dashboard**: Users can generate/revoke tokens from Settings page
-- **Security warning**: Users are warned not to share this URL as it provides direct access without login
+| Subdomain | Length | Auth | Use Case |
+|-----------|--------|------|----------|
+| `subdomain` | 8 chars | Login required | Browser access, sharing |
+| `app_subdomain` | 32 chars | None (URL is auth) | Mobile app (optional) |
+
+**How it works:**
+- **Regular subdomain** (`abc12def.harelay.com`): Requires HARelay login. Safe to share since users must authenticate.
+- **App subdomain** (`a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6.harelay.com`): No login required. The long, random URL itself provides security (36^32 ≈ 6.3 × 10^49 combinations). Created on-demand from Settings page.
+
+**Implementation:**
+- `HaConnection::findBySubdomain()` looks up by either subdomain
+- `ProxyController` skips auth check for app_subdomain requests
+- Tunnel server WebSocket proxy allows app_subdomain without session cookie
+- Users can generate/regenerate/revoke app_subdomain from Settings page
 
 ## Data Transfer Tracking
 
@@ -344,7 +354,7 @@ DailyTraffic::where('ha_connection_id', $id)
 
 ## User Permissions
 
-- `can_set_subdomain` (users table): Allows user to set a custom subdomain instead of the auto-generated 16-character one. Set manually in database for specific users.
+- `can_set_subdomain` (users table): Allows user to set a custom subdomain instead of the auto-generated 8-character one. Set manually in database for specific users.
 
 ## Dashboard Features
 
