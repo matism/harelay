@@ -48,8 +48,10 @@ class SubdomainProxy
         // This ensures cache headers and security headers are set correctly
         $response = $this->securityHeaders->handle($request, fn () => $this->proxyController->handle($request, $subdomain));
 
-        // Save session and set cookie (since we bypass StartSession middleware)
-        $this->saveSession($request, $response);
+        // Note: We intentionally do NOT set the session cookie here.
+        // We only read the session for authentication verification.
+        // Setting the cookie would overwrite it with an incorrect format,
+        // which causes logout on the main domain.
 
         return $response;
     }
@@ -87,37 +89,4 @@ class SubdomainProxy
         $request->setUserResolver(fn () => Auth::user());
     }
 
-    /**
-     * Save the session and set the session cookie on the response.
-     */
-    private function saveSession(Request $request, Response $response): void
-    {
-        $session = $request->session();
-
-        // Save session data to storage (database)
-        $session->save();
-
-        // Set session cookie on response if not already set
-        $sessionName = config('session.cookie');
-        $sessionId = $session->getId();
-
-        // Encrypt the session ID (Laravel expects encrypted session cookies)
-        $cookieValue = app('encrypter')->encrypt($sessionId, false);
-
-        // Get session cookie config
-        $config = config('session');
-
-        $response->headers->setCookie(
-            cookie(
-                name: $sessionName,
-                value: $cookieValue,
-                minutes: $config['lifetime'],
-                path: $config['path'],
-                domain: $config['domain'],
-                secure: $config['secure'] ?? false,
-                httpOnly: $config['http_only'] ?? true,
-                sameSite: $config['same_site'] ?? 'lax'
-            )
-        );
-    }
 }

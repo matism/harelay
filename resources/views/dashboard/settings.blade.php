@@ -122,8 +122,8 @@
                                     <div class="ml-3">
                                         <p class="text-sm font-medium text-red-400 mb-1">Keep this URL private!</p>
                                         <p class="text-sm text-red-300/80">
-                                            Anyone with this URL can access your Home Assistant without logging in.
-                                            Do not share it publicly or with untrusted parties.
+                                            Anyone with this URL can reach your Home Assistant without logging into HARelay.
+                                            They will still need to authenticate with Home Assistant itself, but do not share this URL publicly.
                                         </p>
                                     </div>
                                 </div>
