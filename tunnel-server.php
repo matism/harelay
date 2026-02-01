@@ -270,7 +270,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
         $host = $request->host();
         $proxyDomain = config('app.proxy_domain', 'harelay.com');
 
-        if (! preg_match('/^([a-z0-9]{8,32})\.'.preg_quote($proxyDomain, '/').'$/i', $host, $matches)) {
+        if (! preg_match('/^([a-z0-9]{2,32})\.'.preg_quote($proxyDomain, '/').'$/i', $host, $matches)) {
             tunnelLog("WS proxy: invalid host: {$host}");
             $conn->close();
 
