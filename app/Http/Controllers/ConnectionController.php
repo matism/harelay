@@ -73,7 +73,7 @@ class ConnectionController extends Controller
             'subdomain' => [
                 'required',
                 'string',
-                'min:3',
+                'min:2',
                 'max:20',  // Shorter max to distinguish from 32-char app_subdomains
                 'regex:/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/',
                 'unique:ha_connections,subdomain,'.$connection->id,
