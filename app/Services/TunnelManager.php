@@ -57,6 +57,17 @@ class TunnelManager
         ?string $body = null
     ): ?array {
         $requestId = Str::uuid()->toString();
+        $completed = false;
+
+        // Register shutdown function to clean up if request is interrupted
+        // This catches client disconnects, timeouts, and other terminations
+        register_shutdown_function(function () use ($subdomain, $requestId, &$completed) {
+            if (! $completed) {
+                // Request was interrupted - mark as cancelled and clean up
+                $this->cancelRequest($requestId);
+                $this->removePendingRequest($subdomain, $requestId);
+            }
+        });
 
         // Store request in pending list (base64 encode body for safe JSON transport)
         $pendingKey = $this->getPendingCacheKey($subdomain);
@@ -76,29 +87,16 @@ class TunnelManager
         $maxWaitMicroseconds = self::REQUEST_TTL * 1000000;
         $waited = 0;
         $interval = 2000; // Start at 2ms for fast initial response
-        $checkCancelInterval = 100000; // Check for cancellation every 100ms
-        $lastCancelCheck = 0;
 
         while ($waited < $maxWaitMicroseconds) {
             $response = Cache::store('redis')->get($responseKey);
 
             if ($response !== null) {
+                $completed = true;
                 Cache::store('redis')->forget($responseKey);
                 $this->removePendingRequest($subdomain, $requestId);
 
                 return $response;
-            }
-
-            // Periodically check if client disconnected (every 100ms)
-            if ($waited - $lastCancelCheck >= $checkCancelInterval) {
-                if (connection_aborted()) {
-                    // Client disconnected - mark request as cancelled and clean up
-                    $this->cancelRequest($requestId);
-                    $this->removePendingRequest($subdomain, $requestId);
-
-                    return null;
-                }
-                $lastCancelCheck = $waited;
             }
 
             usleep($interval);
@@ -109,7 +107,9 @@ class TunnelManager
             }
         }
 
-        // Timeout - clean up
+        // Timeout - mark as completed so shutdown function doesn't double-cancel
+        $completed = true;
+        $this->cancelRequest($requestId);
         $this->removePendingRequest($subdomain, $requestId);
 
         return null;
