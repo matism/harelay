@@ -547,12 +547,17 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
     $redisPort = config('database.redis.default.port', 6379);
     $redisPassword = config('database.redis.default.password');
 
-    $redisOptions = ['auth' => $redisPassword];
+    $redisOptions = $redisPassword ? ['auth' => $redisPassword] : [];
     $redisSubscriber = new RedisClient("redis://{$redisHost}:{$redisPort}", $redisOptions);
 
+    tunnelLog("Redis subscriber connecting to {$redisHost}:{$redisPort}");
+
     $redisSubscriber->subscribe('tunnel:subdomain_changes', function ($channel, $message) use (&$addonConnections) {
+        tunnelLog("Redis pub/sub received: {$message}");
+
         $change = json_decode($message, true);
         if (! $change || empty($change['old']) || empty($change['new'])) {
+            tunnelLog("Invalid subdomain change message");
             return;
         }
 
