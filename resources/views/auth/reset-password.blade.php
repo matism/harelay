@@ -4,6 +4,13 @@
         <p class="text-slate-400 text-sm">Choose a new password for your account.</p>
     </div>
 
+    <!-- Generic Error (e.g., session expired) -->
+    @if($errors->has('error'))
+        <div class="mb-4 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+            <p class="text-sm text-red-400 text-center">{{ $errors->first('error') }}</p>
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('password.store') }}">
         @csrf
 

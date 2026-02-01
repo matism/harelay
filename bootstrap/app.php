@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Session\TokenMismatchException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -29,5 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->throttleApi('60,1'); // 60 requests per minute
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Handle CSRF token mismatch (419) by redirecting back with error message
+        $exceptions->render(function (TokenMismatchException $e) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['error' => 'Your session has expired. Please try again.']);
+        });
     })->create();
