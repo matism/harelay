@@ -548,43 +548,52 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
     $redisPassword = config('database.redis.default.password');
 
     $redisOptions = $redisPassword ? ['auth' => $redisPassword] : [];
-    $redisSubscriber = new RedisClient("redis://{$redisHost}:{$redisPort}", $redisOptions);
 
     tunnelLog("Redis subscriber connecting to {$redisHost}:{$redisPort}");
 
-    $redisSubscriber->subscribe('tunnel:subdomain_changes', function ($channel, $message) use (&$addonConnections) {
-        tunnelLog("Redis pub/sub received: {$message}");
-
-        $change = json_decode($message, true);
-        if (! $change || empty($change['old']) || empty($change['new'])) {
-            tunnelLog("Invalid subdomain change message");
-            return;
-        }
-
-        $oldSubdomain = $change['old'];
-        $newSubdomain = $change['new'];
-
-        // Only process if the old subdomain has an active connection
-        if (! isset($addonConnections[$oldSubdomain])) {
-            tunnelLog("Subdomain change ignored (not connected): {$oldSubdomain} -> {$newSubdomain}");
+    $redisSubscriber = new RedisClient("redis://{$redisHost}:{$redisPort}", $redisOptions, function ($success, $client) use (&$addonConnections) {
+        if (! $success) {
+            tunnelLog('ERROR: Redis subscriber failed to connect: '.$client->error());
 
             return;
         }
+        tunnelLog('Redis subscriber connected, subscribing to tunnel:subdomain_changes');
 
-        $conn = $addonConnections[$oldSubdomain];
-        tunnelLog("Subdomain change: {$oldSubdomain} -> {$newSubdomain}");
+        $client->subscribe('tunnel:subdomain_changes', function ($channel, $message) use (&$addonConnections) {
+            tunnelLog("Redis pub/sub received: {$message}");
 
-        // Update the connection mapping
-        unset($addonConnections[$oldSubdomain]);
-        $conn->subdomain = $newSubdomain;
-        $addonConnections[$newSubdomain] = $conn;
+            $change = json_decode($message, true);
+            if (! $change || empty($change['old']) || empty($change['new'])) {
+                tunnelLog('Invalid subdomain change message');
 
-        // Notify the add-on of the new subdomain
-        $conn->send(json_encode([
-            'type' => 'subdomain_changed',
-            'old_subdomain' => $oldSubdomain,
-            'new_subdomain' => $newSubdomain,
-        ]));
+                return;
+            }
+
+            $oldSubdomain = $change['old'];
+            $newSubdomain = $change['new'];
+
+            // Only process if the old subdomain has an active connection
+            if (! isset($addonConnections[$oldSubdomain])) {
+                tunnelLog("Subdomain change ignored (not connected): {$oldSubdomain} -> {$newSubdomain}");
+
+                return;
+            }
+
+            $conn = $addonConnections[$oldSubdomain];
+            tunnelLog("Subdomain change: {$oldSubdomain} -> {$newSubdomain}");
+
+            // Update the connection mapping
+            unset($addonConnections[$oldSubdomain]);
+            $conn->subdomain = $newSubdomain;
+            $addonConnections[$newSubdomain] = $conn;
+
+            // Notify the add-on of the new subdomain
+            $conn->send(json_encode([
+                'type' => 'subdomain_changed',
+                'old_subdomain' => $oldSubdomain,
+                'new_subdomain' => $newSubdomain,
+            ]));
+        });
     });
 
     // ---------------------------------------------------------------------
