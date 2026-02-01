@@ -22,6 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'subscription' => \App\Http\Middleware\CheckSubscription::class,
         ]);
 
+        // Exclude ingress_session from encryption - we need to forward it to HA as-is
+        $middleware->encryptCookies(except: ['ingress_session']);
+
         // Rate limiting for API routes
         $middleware->throttleApi('60,1'); // 60 requests per minute
     })

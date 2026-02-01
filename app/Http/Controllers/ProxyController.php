@@ -70,7 +70,7 @@ class ProxyController extends Controller
         // Build request
         $method = $request->method();
         $uri = $request->getRequestUri();
-        $headers = $this->filterRequestHeaders($request->headers->all());
+        $headers = $this->filterRequestHeaders($request->headers->all(), $request);
         $body = $request->getContent();
         $contentType = $request->header('Content-Type', '');
 
@@ -96,13 +96,13 @@ class ProxyController extends Controller
             ], 504);
         }
 
-        return $this->buildResponse($response);
+        return $this->buildResponse($response, $subdomain);
     }
 
     /**
      * Filter headers that should be forwarded to Home Assistant.
      */
-    private function filterRequestHeaders(array $headers): array
+    private function filterRequestHeaders(array $headers, Request $request): array
     {
         $skipHeaders = [
             'host',
@@ -115,7 +115,7 @@ class ProxyController extends Controller
             'trailers',
             'transfer-encoding',
             'upgrade',
-            'cookie',
+            'cookie',  // We handle specific cookies separately
             'x-csrf-token',
         ];
 
@@ -126,13 +126,19 @@ class ProxyController extends Controller
             }
         }
 
+        // Forward ingress_session cookie if present (needed for HA add-on ingress)
+        $ingressSession = $request->cookie('ingress_session');
+        if ($ingressSession) {
+            $filtered['cookie'] = 'ingress_session='.$ingressSession;
+        }
+
         return $filtered;
     }
 
     /**
      * Build an HTTP response from tunnel response data.
      */
-    private function buildResponse(array $responseData): Response
+    private function buildResponse(array $responseData, string $subdomain): Response
     {
         $statusCode = $responseData['status_code'] ?? 502;
         $headers = $responseData['headers'] ?? [];
@@ -156,6 +162,7 @@ class ProxyController extends Controller
             'expires',
             'etag',
             'last-modified',
+            'set-cookie',  // Handle separately to rewrite domain
         ];
 
         $filteredHeaders = [];
@@ -165,6 +172,64 @@ class ProxyController extends Controller
             }
         }
 
-        return response($body, $statusCode, $filteredHeaders);
+        $response = response($body, $statusCode, $filteredHeaders);
+
+        // Rewrite Set-Cookie headers for ingress_session to use HARelay domain
+        $this->rewriteIngressCookies($response, $headers, $subdomain);
+
+        return $response;
+    }
+
+    /**
+     * Rewrite ingress_session Set-Cookie headers to use HARelay domain.
+     */
+    private function rewriteIngressCookies(Response $response, array $headers, string $subdomain): void
+    {
+        $proxyDomain = config('app.proxy_domain', 'harelay.com');
+        $cookieDomain = "{$subdomain}.{$proxyDomain}";
+        $secure = config('app.proxy_secure', true);
+
+        // Find Set-Cookie headers (can be array or string)
+        $setCookies = $headers['Set-Cookie'] ?? $headers['set-cookie'] ?? null;
+        if (! $setCookies) {
+            return;
+        }
+
+        // Normalize to array
+        if (! is_array($setCookies)) {
+            $setCookies = [$setCookies];
+        }
+
+        foreach ($setCookies as $cookie) {
+            // Only rewrite ingress_session cookies
+            if (! str_starts_with($cookie, 'ingress_session=')) {
+                continue;
+            }
+
+            // Parse the cookie value
+            if (preg_match('/^ingress_session=([^;]+)/', $cookie, $matches)) {
+                $value = $matches[1];
+
+                // Extract Path if present (usually /api/hassio_ingress/)
+                $path = '/';
+                if (preg_match('/Path=([^;]+)/i', $cookie, $pathMatches)) {
+                    $path = $pathMatches[1];
+                }
+
+                // Set the cookie with HARelay domain
+                $response->headers->setCookie(
+                    cookie(
+                        name: 'ingress_session',
+                        value: $value,
+                        minutes: 60 * 24,  // 24 hours
+                        path: $path,
+                        domain: $cookieDomain,
+                        secure: $secure,
+                        httpOnly: true,
+                        sameSite: 'Lax'
+                    )
+                );
+            }
+        }
     }
 }
