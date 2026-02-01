@@ -333,7 +333,7 @@ server {
         proxy_read_timeout 86400;
     }
 
-    # Legacy WebSocket proxy path (fallback)
+    # Alternative WebSocket path (uses explicit message-based auth instead of cookies)
     location /wss {
         proxy_pass http://127.0.0.1:8082;
         proxy_http_version 1.1;

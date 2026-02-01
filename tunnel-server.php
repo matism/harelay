@@ -281,7 +281,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
         // Validate path - only HA WebSocket paths trigger transparent auth
         $path = $request->path();
         if (! preg_match('#^/api/websocket$#', $path)) {
-            // Not a HA WebSocket path - might be /wss legacy, let onMessage handle
+            // Not /api/websocket - let onMessage handle with explicit auth message
             return;
         }
 
@@ -379,7 +379,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
     };
 
     $wsProxy->onMessage = function (TcpConnection $conn, $data) use (&$addonConnections, &$browserWsConnections, &$addonWsStreams) {
-        // First message must be authentication (legacy /wss path)
+        // If not using transparent auth, first message must be explicit authentication
         if (! $conn->authenticated) {
             $message = json_decode($data, true);
 
