@@ -544,20 +544,25 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
     $redisHost = config('database.redis.default.host', '127.0.0.1');
     $redisPort = config('database.redis.default.port', 6379);
     $redisPassword = config('database.redis.default.password');
+    // Laravel's Redis facade adds this prefix to channel names
+    $redisPrefix = config('database.redis.options.prefix', '');
 
     $redisOptions = $redisPassword ? ['auth' => $redisPassword] : [];
 
+    // Channel name must match what Laravel publishes (with prefix)
+    $subdomainChangeChannel = $redisPrefix.'tunnel:subdomain_changes';
+
     tunnelLog("Redis subscriber connecting to {$redisHost}:{$redisPort}");
 
-    $redisSubscriber = new RedisClient("redis://{$redisHost}:{$redisPort}", $redisOptions, function ($success, $client) use (&$addonConnections) {
+    $redisSubscriber = new RedisClient("redis://{$redisHost}:{$redisPort}", $redisOptions, function ($success, $client) use (&$addonConnections, $subdomainChangeChannel) {
         if (! $success) {
             tunnelLog('ERROR: Redis subscriber failed to connect: '.$client->error());
 
             return;
         }
-        tunnelLog('Redis subscriber connected, subscribing to tunnel:subdomain_changes');
+        tunnelLog("Redis subscriber connected, subscribing to {$subdomainChangeChannel}");
 
-        $client->subscribe('tunnel:subdomain_changes', function ($channel, $message) use (&$addonConnections) {
+        $client->subscribe($subdomainChangeChannel, function ($channel, $message) use (&$addonConnections) {
             tunnelLog("Redis pub/sub received: {$message}");
 
             $change = json_decode($message, true);
