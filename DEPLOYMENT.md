@@ -378,13 +378,30 @@ server {
         proxy_send_timeout 86400;
     }
 
-    # Browser WebSocket proxy (for Home Assistant real-time features)
+    # Browser WebSocket proxy - legacy path
     location /wss {
         proxy_pass http://127.0.0.1:8082;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
+        proxy_set_header Cookie $http_cookie;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
+    }
+
+    # Home Assistant WebSocket API (transparent proxy for HA frontend)
+    # IMPORTANT: Cookie header is required for session authentication
+    location /api/websocket {
+        proxy_pass http://127.0.0.1:8082;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header Cookie $http_cookie;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;

@@ -113,6 +113,22 @@ The tunnel uses a Workerman-based WebSocket server that runs alongside Laravel:
 
 Communication between Laravel web requests and the tunnel server uses Redis cache (`Cache::store('redis')`) for fast, reliable IPC.
 
+### Redis Configuration (CRITICAL)
+
+**Laravel has multiple Redis connections with different prefixes:**
+
+| Connection | Database | Prefix | Used By |
+|------------|----------|--------|---------|
+| `default` | DB 0 | `harelay-database-` | `Redis::` facade, pub/sub |
+| `cache` | DB 1 | `harelay-cache-` | `Cache::store('redis')` |
+
+**IMPORTANT for tunnel IPC:**
+- **Always use `Cache::store('redis')`** for request/response IPC between TunnelManager and tunnel-server
+- **Never use `Redis::` facade** in tunnel-server for IPC - it uses a different database and prefix
+- **Pub/sub channels** use the `default` connection prefix, so subscribe to `{prefix}channel_name`
+
+The tunnel-server gets the prefix via `config('database.redis.options.prefix')` for pub/sub subscriptions.
+
 ### Request Flow (HTTP)
 
 1. User visits `subdomain.harelay.com/path`
@@ -274,10 +290,13 @@ TUNNEL_DEBUG=false                    # Enable verbose logging
 
 ### Nginx WebSocket Routes (Production)
 
-Two WebSocket paths are proxied to the tunnel server (see `DEPLOYMENT.md` for full config):
+Three WebSocket paths are proxied to the tunnel server (see `DEPLOYMENT.md` for full config):
 
 - `/tunnel` → port 8081 (add-on connections)
-- `/api/websocket` → port 8082 (transparent browser WebSocket proxy, requires Cookie header)
+- `/api/websocket` → port 8082 (transparent browser WebSocket proxy, **requires Cookie header**)
+- `/wss` → port 8082 (legacy path, also requires Cookie header)
+
+**CRITICAL:** The `/api/websocket` location MUST include `proxy_set_header Cookie $http_cookie;` for session authentication to work.
 
 ## Security Notes
 
@@ -286,33 +305,34 @@ Two WebSocket paths are proxied to the tunnel server (see `DEPLOYMENT.md` for fu
 - Users must be authenticated to access their subdomain
 - Owner verification on all proxy requests
 - Subdomain sanitization: `preg_replace('/[^a-z0-9]/', '', $subdomain)`
-- Regular subdomains are 8 characters (requires login, so length is less critical)
-- App subdomains are 32 characters (36^32 combinations) - no login required, URL is the auth
 - WebSocket path validation: only `/api/websocket` path allowed for transparent proxy
 - Stream IDs use cryptographically secure random bytes
 - Security headers on proxy responses (X-Robots-Tag, X-Frame-Options)
 - Device codes expire after 15 minutes
 - Plain tokens stored temporarily in device_codes, cleared after first poll
-- App subdomains are 32 chars (36^32 combinations) - impossible to brute force
 
-### Mobile App Access (Dual Subdomain)
+### Subdomain Types
 
-Each connection can have two subdomains for different access modes:
+| Type | Length | Auth | Use Case |
+|------|--------|------|----------|
+| Auto-generated | 8 chars | Login required | Default for new users |
+| Custom | 2-32 chars | Login required | Users with `can_set_subdomain` flag |
+| App subdomain | 32 chars | None (URL is auth) | Mobile app access |
 
-| Subdomain | Length | Auth | Use Case |
-|-----------|--------|------|----------|
-| `subdomain` | 8 chars | Login required | Browser access, sharing |
-| `app_subdomain` | 32 chars | None (URL is auth) | Mobile app (optional) |
+**Note:** The tunnel-server WebSocket proxy validates subdomain length as 2-32 characters to support custom subdomains.
 
-**How it works:**
-- **Regular subdomain** (`abc12def.harelay.com`): Requires HARelay login. Safe to share since users must authenticate.
-- **App subdomain** (`a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6.harelay.com`): No login required. The long, random URL itself provides security (36^32 ≈ 6.3 × 10^49 combinations). Created on-demand from Settings page.
+### Mobile App Access (App Subdomain)
 
-**Implementation:**
-- `HaConnection::findBySubdomain()` looks up by either subdomain
-- `ProxyController` skips auth check for app_subdomain requests
-- Tunnel server WebSocket proxy allows app_subdomain without session cookie
-- Users can generate/regenerate/revoke app_subdomain from Settings page
+Each connection can optionally have an `app_subdomain` for mobile app access without login:
+
+- **Regular subdomain**: Requires HARelay login (safe to share)
+- **App subdomain**: 32-character random string, no login required (URL is the auth)
+
+**Implementation details:**
+- `findConnectionBySubdomain()` in tunnel-server checks both `subdomain` and `app_subdomain` columns
+- `ProxyController` and tunnel-server WebSocket proxy skip auth for app_subdomain requests
+- Users generate/revoke app_subdomain from Settings page
+- Security: 36^32 ≈ 6.3 × 10^49 combinations makes brute-force impossible
 
 ## Data Transfer Tracking
 
@@ -388,8 +408,31 @@ Enable verbose logging with `TUNNEL_DEBUG=true` in `.env`, then check stdout or:
 sudo journalctl -u harelay-tunnel -f
 ```
 
+## Common Pitfalls (READ BEFORE MAKING CHANGES)
+
+### Redis in Workerman
+- **Never use `Redis::` facade for IPC** - it uses different DB/prefix than `Cache::store('redis')`
+- **Pub/sub channels need the prefix** - Laravel's `Redis::publish()` adds `harelay-database-` prefix, so Workerman's RedisClient must subscribe to the prefixed channel name
+- **Don't use BLPOP/blocking operations** - Laravel's Redis facade doesn't handle these reliably in Workerman's long-running process
+
+### Subdomain Validation
+- **Custom subdomains can be 2+ characters** - don't hardcode 8-character minimum in regex patterns
+- **App subdomains are 32 characters** - these are looked up via `app_subdomain` column, not `subdomain`
+- **Always use `findConnectionBySubdomain()`** - it checks both regular and app subdomains
+
+### WebSocket Proxy
+- **Cookie header is required for session auth** - nginx must forward `Cookie $http_cookie` to port 8082
+- **Only `/api/websocket` path is allowed** - this is validated in tunnel-server to prevent abuse
+- **`tunnelSubdomain` vs `subdomain`** - when user accesses via app_subdomain, `tunnelSubdomain` is the regular subdomain used for add-on communication
+
+### Session Authentication
+- **SESSION_DOMAIN must include dot prefix** - e.g., `.harelay.com` for cookies to work across subdomains
+- **Session cookie name is configurable** - defaults to `{app_name}-session`, read via `config('session.cookie')`
+
 ## Working Guidelines
 
 - **Always update documentation**: When adding features, commands, or changing behavior, update both `README.md` and `CLAUDE.md`
 - **Run tests before committing**: Use `composer test` to verify changes
 - **Format code**: Run `./vendor/bin/pint` before committing
+- **Check nginx config**: When debugging WebSocket issues, verify nginx forwards required headers
+- **Test both subdomain types**: When changing proxy/WebSocket code, test both regular and app subdomains
