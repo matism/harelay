@@ -20,6 +20,8 @@ class TunnelManager
 
     private const REQUEST_TTL = 60; // seconds
 
+    private const CANCELLED_TTL = 10; // seconds - short TTL for cancelled request markers
+
     /**
      * Check if a tunnel connection is active.
      */
@@ -74,6 +76,8 @@ class TunnelManager
         $maxWaitMicroseconds = self::REQUEST_TTL * 1000000;
         $waited = 0;
         $interval = 2000; // Start at 2ms for fast initial response
+        $checkCancelInterval = 100000; // Check for cancellation every 100ms
+        $lastCancelCheck = 0;
 
         while ($waited < $maxWaitMicroseconds) {
             $response = Cache::store('redis')->get($responseKey);
@@ -83,6 +87,18 @@ class TunnelManager
                 $this->removePendingRequest($subdomain, $requestId);
 
                 return $response;
+            }
+
+            // Periodically check if client disconnected (every 100ms)
+            if ($waited - $lastCancelCheck >= $checkCancelInterval) {
+                if (connection_aborted()) {
+                    // Client disconnected - mark request as cancelled and clean up
+                    $this->cancelRequest($requestId);
+                    $this->removePendingRequest($subdomain, $requestId);
+
+                    return null;
+                }
+                $lastCancelCheck = $waited;
             }
 
             usleep($interval);
@@ -120,6 +136,18 @@ class TunnelManager
         }
     }
 
+    /**
+     * Mark a request as cancelled so tunnel server can skip it.
+     */
+    private function cancelRequest(string $requestId): void
+    {
+        Cache::store('redis')->put(
+            $this->getCancelledCacheKey($requestId),
+            true,
+            self::CANCELLED_TTL
+        );
+    }
+
     private function getPendingCacheKey(string $subdomain): string
     {
         return self::CACHE_PREFIX.'pending:'.$subdomain;
@@ -128,5 +156,10 @@ class TunnelManager
     private function getResponseCacheKey(string $requestId): string
     {
         return self::CACHE_PREFIX.'response:'.$requestId;
+    }
+
+    private function getCancelledCacheKey(string $requestId): string
+    {
+        return self::CACHE_PREFIX.'cancelled:'.$requestId;
     }
 }

@@ -508,6 +508,15 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             }
 
             foreach ($requests as $requestId => $request) {
+                // Check if request was cancelled by client disconnect
+                $cancelledKey = "tunnel:cancelled:{$requestId}";
+                if (Cache::store('redis')->get($cancelledKey)) {
+                    tunnelLog("HTTP -> {$subdomain}: CANCELLED {$request['method']} {$request['uri']}", true);
+                    Cache::store('redis')->forget($cancelledKey);
+
+                    continue;
+                }
+
                 tunnelLog("HTTP -> {$subdomain}: {$request['method']} {$request['uri']}", true);
 
                 // Track incoming bytes (request body from user)
