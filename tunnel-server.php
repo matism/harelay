@@ -695,6 +695,15 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
             return;
         }
 
+        // Check if request was cancelled - discard response immediately
+        $cancelledKey = "tunnel:cancelled:{$requestId}";
+        if (Cache::store('redis')->get($cancelledKey)) {
+            tunnelLog("HTTP <- {$conn->subdomain}: DISCARDED (cancelled)", true);
+            Cache::store('redis')->forget($cancelledKey);
+
+            return;
+        }
+
         $statusCode = (int) ($message['status_code'] ?? 502);
         tunnelLog("HTTP <- {$conn->subdomain}: {$statusCode}", true);
 
