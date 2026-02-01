@@ -11,6 +11,7 @@
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "pragmarx/google2fa-laravel": "^2.3",
+        "workerman/redis": "^2.0",
         "workerman/workerman": "^5.1"
     },
     "require-dev": {

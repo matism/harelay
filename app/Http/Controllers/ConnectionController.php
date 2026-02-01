@@ -6,6 +6,7 @@ use App\Models\HaConnection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Redis;
 
 class ConnectionController extends Controller
 {
@@ -83,13 +84,21 @@ class ConnectionController extends Controller
             'subdomain.unique' => 'This subdomain is already taken.',
         ]);
 
+        $oldSubdomain = $connection->subdomain;
+        $newSubdomain = strtolower($request->subdomain);
+
         $connection->update([
-            'subdomain' => strtolower($request->subdomain),
-            'status' => 'disconnected',
+            'subdomain' => $newSubdomain,
         ]);
 
+        // Notify tunnel server to update the add-on's subdomain via pub/sub (event-driven, no polling)
+        Redis::publish('tunnel:subdomain_changes', json_encode([
+            'old' => $oldSubdomain,
+            'new' => $newSubdomain,
+        ]));
+
         return redirect()->route('dashboard.settings')
-            ->with('success', 'Subdomain updated successfully! Please reconnect your add-on.');
+            ->with('success', 'Subdomain updated successfully!');
     }
 
     public function destroy(Request $request): RedirectResponse

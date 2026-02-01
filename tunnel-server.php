@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
+use Workerman\Redis\Client as RedisClient;
 use Workerman\Timer;
 use Workerman\Worker;
 
@@ -536,6 +537,48 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
             Cache::store('redis')->forget($pendingKey);
         }
+    });
+
+    // ---------------------------------------------------------------------
+    // Subdomain Change Subscription (event-driven via Redis Pub/Sub)
+    // ---------------------------------------------------------------------
+    $redisHost = config('database.redis.default.host', '127.0.0.1');
+    $redisPort = config('database.redis.default.port', 6379);
+    $redisPassword = config('database.redis.default.password');
+
+    $redisOptions = ['auth' => $redisPassword];
+    $redisSubscriber = new RedisClient("redis://{$redisHost}:{$redisPort}", $redisOptions);
+
+    $redisSubscriber->subscribe('tunnel:subdomain_changes', function ($channel, $message) use (&$addonConnections) {
+        $change = json_decode($message, true);
+        if (! $change || empty($change['old']) || empty($change['new'])) {
+            return;
+        }
+
+        $oldSubdomain = $change['old'];
+        $newSubdomain = $change['new'];
+
+        // Only process if the old subdomain has an active connection
+        if (! isset($addonConnections[$oldSubdomain])) {
+            tunnelLog("Subdomain change ignored (not connected): {$oldSubdomain} -> {$newSubdomain}");
+
+            return;
+        }
+
+        $conn = $addonConnections[$oldSubdomain];
+        tunnelLog("Subdomain change: {$oldSubdomain} -> {$newSubdomain}");
+
+        // Update the connection mapping
+        unset($addonConnections[$oldSubdomain]);
+        $conn->subdomain = $newSubdomain;
+        $addonConnections[$newSubdomain] = $conn;
+
+        // Notify the add-on of the new subdomain
+        $conn->send(json_encode([
+            'type' => 'subdomain_changed',
+            'old_subdomain' => $oldSubdomain,
+            'new_subdomain' => $newSubdomain,
+        ]));
     });
 
     // ---------------------------------------------------------------------
