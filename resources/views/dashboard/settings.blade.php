@@ -24,7 +24,7 @@
                                         @method('PATCH')
                                         <div class="flex items-center flex-1 min-w-0">
                                             <input type="text" name="subdomain" value="{{ $connection->subdomain }}"
-                                                pattern="[a-z0-9-]+" minlength="3" maxlength="32"
+                                                pattern="[a-z0-9-]+" minlength="2" maxlength="20"
                                                 class="flex-1 min-w-0 rounded-lg border-0 bg-white/5 text-white placeholder-slate-400 shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-cyan-400 sm:text-sm px-4 py-3">
                                             <span class="ml-2 text-slate-400 whitespace-nowrap">.{{ config('app.proxy_domain') }}</span>
                                         </div>
