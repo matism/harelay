@@ -279,11 +279,6 @@ Two WebSocket paths are proxied to the tunnel server (see `DEPLOYMENT.md` for fu
 - `/tunnel` → port 8081 (add-on connections)
 - `/api/websocket` → port 8082 (transparent browser WebSocket proxy, requires Cookie header)
 
-## Proxy Handling Notes
-
-### Supervisor API (`/api/hassio/*`)
-For Supervisor API endpoints, the add-on forwards the user's original Authorization token instead of replacing it with the Supervisor token. This allows HA to validate user permissions for admin-only endpoints like addon logs.
-
 ## Security Notes
 
 - Connection tokens are hashed (bcrypt) in database
