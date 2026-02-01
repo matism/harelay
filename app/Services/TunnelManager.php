@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\HaConnection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 
 /**
@@ -70,21 +69,31 @@ class TunnelManager
         ];
         Cache::store('redis')->put($pendingKey, $pendingRequests, self::REQUEST_TTL);
 
-        // Wait for response using BLPOP (blocks efficiently in Redis, no polling)
+        // Wait for response with fast polling
         $responseKey = $this->getResponseCacheKey($requestId);
-        $result = Redis::blpop($responseKey, self::REQUEST_TTL);
+        $maxWaitMicroseconds = self::REQUEST_TTL * 1000000;
+        $waited = 0;
+        $interval = 5000; // Start at 5ms for fast initial response
 
-        // Clean up pending request
-        $this->removePendingRequest($subdomain, $requestId);
+        while ($waited < $maxWaitMicroseconds) {
+            $response = Cache::store('redis')->get($responseKey);
 
-        if ($result === null) {
-            return null; // Timeout
+            if ($response !== null) {
+                Cache::store('redis')->forget($responseKey);
+                $this->removePendingRequest($subdomain, $requestId);
+
+                return $response;
+            }
+
+            usleep($interval);
+            $waited += $interval;
+            $interval = min($interval + 5000, 50000); // Increase by 5ms, cap at 50ms
         }
 
-        // BLPOP returns [key, value] array
-        $responseJson = $result[1] ?? null;
+        // Timeout - clean up
+        $this->removePendingRequest($subdomain, $requestId);
 
-        return $responseJson ? json_decode($responseJson, true) : null;
+        return null;
     }
 
     /**

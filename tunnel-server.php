@@ -27,9 +27,7 @@ use App\Models\HaConnection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Redis;
 use Workerman\Connection\TcpConnection;
-use Workerman\Protocols\Http\Request;
 use Workerman\Redis\Client as RedisClient;
 use Workerman\Timer;
 use Workerman\Worker;
@@ -694,15 +692,13 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
             trackTraffic($conn->subdomain, 0, $bodyBytes);
         }
 
-        // Push response to list - Laravel's BLPOP is waiting for this
-        $responseKey = "tunnel:response:{$requestId}";
-        Redis::rpush($responseKey, json_encode([
+        // Store response in cache - TunnelManager is polling for this
+        Cache::store('redis')->put("tunnel:response:{$requestId}", [
             'status_code' => $statusCode,
             'headers' => $message['headers'] ?? [],
             'body' => $body,
             'is_base64' => true,
-        ]));
-        Redis::expire($responseKey, 60); // TTL in case request already timed out
+        ], 60);
 
         return;
     }
