@@ -209,12 +209,14 @@ Valet automatically handles wildcard subdomains: `https://{subdomain}.harelay.te
 
 ### HA Add-on
 
-The Home Assistant add-on is in a separate repository at `../harelay-addon/`. It's a Python WebSocket client that:
+The Home Assistant add-on is in a separate repository at `../harelay-addon/` (current version: 1.2.3). It's a Python WebSocket client that:
 - Connects to the tunnel server on port 8081
 - Authenticates with subdomain and token
 - Proxies HTTP requests to local Home Assistant
 - Proxies WebSocket connections for real-time features
 - Supports device code pairing (leave credentials empty to start pairing mode)
+- Stores credentials in `/data/credentials.json` (hidden from HA config UI)
+- Has retry logic with exponential backoff for rate-limited API calls (429 errors)
 
 ### Device Code Pairing Flow
 
@@ -226,7 +228,7 @@ Users can pair the add-on without manually copying credentials:
 4. User visits `/link`, logs in (or registers), enters the code
 5. Server creates/links connection and stores plain token temporarily
 6. Add-on polls `GET /api/device/poll/{deviceCode}` and receives credentials
-7. Add-on saves credentials via Supervisor API and connects
+7. Add-on saves credentials to `/data/credentials.json` and connects
 
 **API Endpoints:**
 ```
@@ -270,6 +272,13 @@ TUNNEL_DEBUG=false                    # Enable verbose logging
 | WS_PROXY_PATH | (empty) | /wss |
 | Browser WS URL | ws://host:8082 | wss://host/wss |
 
+### Nginx WebSocket Routes (Production)
+
+Two WebSocket paths are proxied to the tunnel server (see `DEPLOYMENT.md` for full config):
+
+- `/tunnel` → port 8081 (add-on connections)
+- `/api/websocket` → port 8082 (transparent browser WebSocket proxy, requires Cookie header)
+
 ## Proxy Handling Notes
 
 ### Supervisor API (`/api/hassio/*`)
@@ -283,7 +292,7 @@ For Supervisor API endpoints, the add-on forwards the user's original Authorizat
 - Owner verification on all proxy requests
 - Subdomain sanitization: `preg_replace('/[^a-z0-9]/', '', $subdomain)`
 - Subdomains are 16 characters (36^16 ≈ 7.9 × 10^24 combinations) to prevent brute-force
-- WebSocket path validation: only `/api/websocket` allowed for transparent proxy
+- WebSocket path validation: only `/api/websocket` path allowed for transparent proxy
 - Stream IDs use cryptographically secure random bytes
 - Security headers on proxy responses (X-Robots-Tag, X-Frame-Options)
 - Device codes expire after 15 minutes
@@ -337,6 +346,31 @@ DailyTraffic::where('ha_connection_id', $id)
 - **Loading animation**: Shows spinner with "Waiting for Connection" state while add-on connects
 - **Device link code auto-formatting**: Automatically adds hyphen after 4th character (XXXX-XXXX format)
 - **Data transfer stats**: Settings page shows downloaded/uploaded/total bytes in human-readable format
+
+## Debugging
+
+### Verify Redis is Working
+
+```bash
+# Test Redis server
+redis-cli ping  # Should return PONG
+
+# Test Laravel Redis connection
+php artisan tinker
+>>> Cache::store('redis')->put('test', 'ok', 60);
+>>> Cache::store('redis')->get('test');  // Should return "ok"
+
+# Watch Redis activity in real-time
+redis-cli monitor
+```
+
+### Tunnel Server Logs
+
+Enable verbose logging with `TUNNEL_DEBUG=true` in `.env`, then check stdout or:
+```bash
+# If running via systemd
+sudo journalctl -u harelay-tunnel -f
+```
 
 ## Working Guidelines
 

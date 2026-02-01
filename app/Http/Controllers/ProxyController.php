@@ -44,7 +44,9 @@ class ProxyController extends Controller
 
         // Check authorization
         if ($request->user()->id !== $connection->user_id) {
-            return response('Unauthorized', 403);
+            return response()->view('errors.unauthorized', [
+                'connection' => $connection,
+            ], 403);
         }
 
         // Check tunnel connection
