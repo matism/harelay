@@ -127,6 +127,12 @@ class ProxyController extends Controller
             $filtered['cookie'] = 'ingress_session='.$ingressSession;
         }
 
+        // Always set X-Forwarded-For with client IP for consistent auth flows
+        // HA tracks IP during login_flow and rejects if it changes
+        $clientIp = $request->ip();
+        $filtered['X-Forwarded-For'] = $clientIp;
+        $filtered['X-Real-IP'] = $clientIp;
+
         return $filtered;
     }
 
