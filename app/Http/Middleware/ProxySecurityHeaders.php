@@ -34,12 +34,19 @@ class ProxySecurityHeaders
         // Content Security Policy for proxied content
         $response->headers->set('Content-Security-Policy', "frame-ancestors 'self'");
 
-        // Aggressive cache control - prevent any caching of proxied content
-        // This ensures users always see fresh content, especially important for auth checks
-        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-        $response->headers->set('Pragma', 'no-cache');  // HTTP/1.0 compatibility
-        $response->headers->set('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
-        $response->headers->set('Vary', 'Cookie');  // Different cache per user session
+        // Cache control based on content type
+        // Allow browser caching for static assets, but prevent caching for HTML/dynamic content
+        $contentType = $response->headers->get('Content-Type', '');
+        $isStaticAsset = preg_match('#^(image/|audio/|video/|font/|application/javascript|application/json|text/css|text/javascript|application/x-javascript|application/font|application/vnd.ms-fontobject|application/wasm)#i', $contentType);
+
+        if ($isStaticAsset) {
+            // Allow browser caching for static assets, but not shared caches
+            $response->headers->set('Cache-Control', 'private, max-age=3600');
+        } else {
+            // Prevent caching for HTML and dynamic content (auth checks matter here)
+            $response->headers->set('Cache-Control', 'private, no-store');
+            $response->headers->set('Vary', 'Cookie');
+        }
 
         return $response;
     }
