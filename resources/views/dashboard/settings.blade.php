@@ -105,7 +105,7 @@
                 </div>
 
                 <!-- Mobile App Link -->
-                <div class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl rounded-2xl border border-white/20">
+                <div id="mobile-app" class="bg-white/10 backdrop-blur-lg overflow-hidden shadow-xl rounded-2xl border border-white/20 scroll-mt-6">
                     <div class="p-6 sm:p-8">
                         <h3 class="text-lg font-semibold text-white mb-1">Mobile App Link</h3>
                         <p class="text-slate-400 text-sm mb-6">
