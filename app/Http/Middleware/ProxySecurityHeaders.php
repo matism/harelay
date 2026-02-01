@@ -34,8 +34,12 @@ class ProxySecurityHeaders
         // Content Security Policy for proxied content
         $response->headers->set('Content-Security-Policy', "frame-ancestors 'self'");
 
-        // Cache control - don't cache proxied responses in shared caches
-        $response->headers->set('Cache-Control', 'private, no-store');
+        // Aggressive cache control - prevent any caching of proxied content
+        // This ensures users always see fresh content, especially important for auth checks
+        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $response->headers->set('Pragma', 'no-cache');  // HTTP/1.0 compatibility
+        $response->headers->set('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
+        $response->headers->set('Vary', 'Cookie');  // Different cache per user session
 
         return $response;
     }

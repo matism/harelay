@@ -30,7 +30,7 @@ class ProxyController extends Controller
         $connection = HaConnection::where('subdomain', $subdomain)->first();
 
         if (! $connection) {
-            return response('Connection not found', 404);
+            return response()->view('errors.not-found', [], 404);
         }
 
         // Check authentication
@@ -132,13 +132,19 @@ class ProxyController extends Controller
             $body = base64_decode($body);
         }
 
-        // Filter response headers
+        // Filter response headers - remove headers that could interfere with our security/caching
         $skipHeaders = [
             'transfer-encoding',
             'connection',
             'keep-alive',
             'content-encoding',
             'content-length',
+            // Remove HA's cache headers so our middleware's headers take precedence
+            'cache-control',
+            'pragma',
+            'expires',
+            'etag',
+            'last-modified',
         ];
 
         $filteredHeaders = [];
