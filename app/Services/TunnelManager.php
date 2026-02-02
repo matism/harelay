@@ -86,7 +86,7 @@ class TunnelManager
         $responseKey = $this->getResponseCacheKey($requestId);
         $maxWaitMicroseconds = self::REQUEST_TTL * 1000000;
         $waited = 0;
-        $interval = 2000; // Start at 2ms for fast initial response
+        $interval = 500; // Start at 0.5ms for fastest initial response
 
         while ($waited < $maxWaitMicroseconds) {
             $response = Cache::store('redis')->get($responseKey);
@@ -101,9 +101,10 @@ class TunnelManager
 
             usleep($interval);
             $waited += $interval;
-            // Stay at 2ms for first 200ms, then gradually increase to 20ms
-            if ($waited > 200000) {
-                $interval = min($interval + 2000, 20000);
+            // Gradually increase polling interval to reduce CPU usage
+            // 0.5ms for first 50ms, then ramp up to 10ms max
+            if ($waited > 50000) {
+                $interval = min($interval + 500, 10000);
             }
         }
 

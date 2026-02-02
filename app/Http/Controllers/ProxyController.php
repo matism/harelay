@@ -150,21 +150,30 @@ class ProxyController extends Controller
             $body = base64_decode($body);
         }
 
-        // Filter response headers - remove headers that could interfere with our security/caching
+        // Check if this is a static asset that can be cached
+        $contentType = $headers['Content-Type'] ?? $headers['content-type'] ?? '';
+        $isStaticAsset = $this->isStaticAsset($contentType);
+
+        // Base headers to always skip
         $skipHeaders = [
             'transfer-encoding',
             'connection',
             'keep-alive',
             'content-encoding',
             'content-length',
-            // Remove HA's cache headers so our middleware's headers take precedence
-            'cache-control',
-            'pragma',
-            'expires',
-            'etag',
-            'last-modified',
             'set-cookie',  // Handle separately to rewrite domain
         ];
+
+        // For non-static assets, also skip cache headers (security)
+        if (! $isStaticAsset) {
+            $skipHeaders = array_merge($skipHeaders, [
+                'cache-control',
+                'pragma',
+                'expires',
+                'etag',
+                'last-modified',
+            ]);
+        }
 
         $filteredHeaders = [];
         foreach ($headers as $name => $value) {
@@ -173,12 +182,44 @@ class ProxyController extends Controller
             }
         }
 
+        // Add aggressive caching for static assets
+        if ($isStaticAsset && $statusCode === 200) {
+            $filteredHeaders['Cache-Control'] = 'public, max-age=31536000, immutable';
+        }
+
         $response = response($body, $statusCode, $filteredHeaders);
 
         // Rewrite Set-Cookie headers for ingress_session to use HARelay domain
         $this->rewriteIngressCookies($response, $headers, $subdomain);
 
         return $response;
+    }
+
+    /**
+     * Check if content type indicates a static asset that can be cached.
+     */
+    private function isStaticAsset(string $contentType): bool
+    {
+        $staticTypes = [
+            'application/javascript',
+            'text/javascript',
+            'text/css',
+            'image/',
+            'font/',
+            'application/font',
+            'application/x-font',
+            'audio/',
+            'video/',
+            'application/wasm',
+        ];
+
+        foreach ($staticTypes as $type) {
+            if (str_contains($contentType, $type)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
