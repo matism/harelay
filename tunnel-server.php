@@ -505,6 +505,8 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
         // Forward subsequent messages to add-on (using tunnel subdomain)
         $tunnelSubdomain = $conn->tunnelSubdomain ?? $conn->subdomain;
+        tunnelLog("WS proxy: forwarding message from {$conn->subdomain} stream={$conn->streamId} len=".strlen($data));
+
         if (isset($addonConnections[$tunnelSubdomain])) {
             // Track incoming WebSocket bytes
             trackTraffic($tunnelSubdomain, strlen($data), 0);
@@ -514,6 +516,8 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
                 'stream_id' => $conn->streamId,
                 'message' => $data,
             ]));
+        } else {
+            tunnelLog("WS proxy: no addon connection for {$tunnelSubdomain}");
         }
     };
 
