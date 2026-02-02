@@ -289,14 +289,14 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
             // Debug: log all cookies
             $allCookies = $request->cookie();
-            tunnelLog("WS proxy: all cookies: ".json_encode($allCookies));
+            tunnelLog('WS proxy: all cookies: '.json_encode($allCookies));
 
             // For ingress, the ingress_session cookie IS the authentication
             $ingressSession = $request->cookie('ingress_session');
-            tunnelLog("WS proxy: ingress_session value: ".($ingressSession ? substr($ingressSession, 0, 40).'...' : 'MISSING'));
+            tunnelLog('WS proxy: ingress_session value: '.($ingressSession ? substr($ingressSession, 0, 40).'...' : 'MISSING'));
 
             if (! $ingressSession) {
-                tunnelLog("WS proxy: ingress path missing ingress_session - closing");
+                tunnelLog('WS proxy: ingress path missing ingress_session - closing');
                 $conn->close();
 
                 return;
@@ -354,7 +354,8 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             return;
         }
 
-        // App subdomain access - no authentication required (URL is the auth)
+        // App subdomain access - no HARelay login required (URL is the auth)
+        // User still needs to log into Home Assistant itself
         if ($isAppSubdomain) {
             $conn->subdomain = $subdomain;
             $conn->tunnelSubdomain = $tunnelSubdomain;
@@ -687,6 +688,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             if ($timeSinceLastPong > $staleTimeout) {
                 tunnelLog("Add-on: stale connection for {$subdomain} (no response for {$timeSinceLastPong}s), closing");
                 $conn->close();
+
                 continue;
             }
 
