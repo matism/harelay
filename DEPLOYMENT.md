@@ -1050,9 +1050,9 @@ When users navigate away mid-request, cleanup is handled automatically:
 ### App Subdomain Authentication
 
 App subdomains (32 chars) bypass HARelay login but still require HA login:
-- All cookies passed through (regular subdomain filters them to avoid forwarding HARelay session cookies)
-- `Set-Cookie` domain attribute stripped for browser compatibility
 - User must check "Stay logged in" in HA for persistent auth
+
+Note: Cookie handling is the same for both subdomain types - all cookies pass through, with `Domain` attribute stripped so browser uses request origin.
 
 ### Ingress WebSocket Paths
 

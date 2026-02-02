@@ -353,30 +353,18 @@ Each connection can optionally have an `app_subdomain` for mobile app access wit
 |--------|-------------------|---------------|
 | HARelay auth | Required (verifies ownership) | Not required (URL is auth) |
 | HA auth | Required (after HARelay login) | Required (directly) |
-| Cookies | Filtered (only `ingress_session` for HA add-ons) | All cookies passed through (HA needs them for auth) |
-| Set-Cookie | Only `ingress_session` rewritten | All cookies passed through (domain stripped) |
-| Security headers | CSP and Cache-Control set by HARelay | Let HA control headers |
 | Use case | Web browser with HARelay account | Mobile apps, direct HA access |
 
-**Why Cookie Handling Differs:**
+**Cookie Handling (same for both subdomain types):**
 
-Both subdomain types require logging into Home Assistant (HA uses auth tokens stored in localStorage, not cookies). The difference is only the HARelay layer:
+All cookies pass through in both directions:
+- **Request cookies**: All browser cookies forwarded to HA
+- **Response cookies**: All `Set-Cookie` headers from HA passed through with:
+  - `Domain` attribute stripped (browser uses request origin)
+  - `Secure` flag added if proxy uses HTTPS
+  - `SameSite=Lax` added if not present
 
-- **Regular subdomain**: User logs into HARelay first (verifies ownership), then logs into HA. We filter out all cookies except `ingress_session` (needed for HA add-on ingress authentication).
-- **App subdomain**: No HARelay login required (URL is the auth). User logs into HA directly. All cookies pass through in case HA or its integrations need them.
-
-**Cookie Handling for App Subdomain:**
-
-Since app_subdomain bypasses HARelay auth, all cookies pass through in case HA or its integrations need them:
-
-1. **Request cookies**: All browser cookies forwarded to HA (not filtered like regular subdomain)
-2. **Response cookies**: All `Set-Cookie` headers from HA passed through with:
-   - `Domain` attribute stripped (browser uses request origin)
-   - `Secure` flag added if proxy uses HTTPS
-   - `SameSite=Lax` added if not present
-3. **Security headers**: CSP and Cache-Control not overwritten (HA controls these)
-
-Note: HA's main authentication uses tokens stored in localStorage, not cookies. The `ingress_session` cookie is specifically for HA add-on ingress functionality.
+Note: HA's main authentication uses tokens stored in localStorage, not cookies. The `ingress_session` cookie is used by HA add-ons for ingress functionality.
 
 **HA Login Persistence on App Subdomain:**
 

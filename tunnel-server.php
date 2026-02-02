@@ -285,15 +285,8 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
         // Only these paths use ingress_session cookie
         // =========================================================================
         if (preg_match('#^/api/hassio_ingress/[^/]+/ws$#', $path)) {
-            tunnelLog("WS proxy: ingress path detected: {$path}");
-
-            // Debug: log all cookies
-            $allCookies = $request->cookie();
-            tunnelLog('WS proxy: all cookies: '.json_encode($allCookies));
-
             // For ingress, the ingress_session cookie IS the authentication
             $ingressSession = $request->cookie('ingress_session');
-            tunnelLog('WS proxy: ingress_session value: '.($ingressSession ? substr($ingressSession, 0, 40).'...' : 'MISSING'));
 
             if (! $ingressSession) {
                 tunnelLog('WS proxy: ingress path missing ingress_session - closing');
@@ -317,11 +310,9 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             $conn->authenticated = true;
             $conn->streamId = bin2hex(random_bytes(16));
             $conn->transparentAuth = true;
-            $conn->ingressSession = $ingressSession;  // ONLY set for ingress paths
+            $conn->ingressSession = $ingressSession;
 
-            tunnelLog("WS proxy: ingress {$path}");
-
-            return;  // Early return - main /api/websocket code below is not executed
+            return;
         }
 
         // =========================================================================

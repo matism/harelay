@@ -182,7 +182,7 @@ class ProxyController extends Controller
         $response = response($body, $statusCode, $filteredHeaders);
 
         // Pass through all Set-Cookie headers (strip Domain so browser uses request origin)
-        $this->passThruSetCookies($response, $headers, $subdomain);
+        $this->passThruSetCookies($response, $headers);
 
         return $response;
     }
@@ -218,7 +218,7 @@ class ProxyController extends Controller
      * Pass through all Set-Cookie headers from HA.
      * We strip the Domain attribute so the browser uses the request origin.
      */
-    private function passThruSetCookies(Response $response, array $headers, string $subdomain): void
+    private function passThruSetCookies(Response $response, array $headers): void
     {
         $setCookies = $headers['Set-Cookie'] ?? $headers['set-cookie'] ?? null;
         if (! $setCookies) {
@@ -252,5 +252,4 @@ class ProxyController extends Controller
             $response->headers->set('Set-Cookie', $cookie, false);
         }
     }
-
 }
