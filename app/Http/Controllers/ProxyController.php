@@ -202,7 +202,7 @@ class ProxyController extends Controller
         // Handle Set-Cookie headers
         if ($isAppSubdomain) {
             // For app_subdomain, pass through all Set-Cookie headers for HA auth
-            $this->passThruSetCookies($response, $headers);
+            $this->passThruSetCookies($response, $headers, $subdomain);
         } else {
             // For regular subdomain, only rewrite ingress_session cookies
             $this->rewriteIngressCookies($response, $headers, $subdomain);
@@ -241,8 +241,9 @@ class ProxyController extends Controller
     /**
      * Pass through all Set-Cookie headers from HA for app_subdomain.
      * This allows HA's auth cookies to work properly.
+     * We strip the Domain attribute so the browser uses the request origin.
      */
-    private function passThruSetCookies(Response $response, array $headers): void
+    private function passThruSetCookies(Response $response, array $headers, string $subdomain): void
     {
         $setCookies = $headers['Set-Cookie'] ?? $headers['set-cookie'] ?? null;
         if (! $setCookies) {
@@ -254,8 +255,24 @@ class ProxyController extends Controller
             $setCookies = [$setCookies];
         }
 
+        $proxyDomain = config('app.proxy_domain', 'harelay.com');
+        $secure = config('app.proxy_secure', true);
+
         foreach ($setCookies as $cookie) {
-            // Pass through the cookie as-is (browser will associate with request origin)
+            // Strip any Domain attribute (HA might set localhost or its internal domain)
+            // This lets the browser associate the cookie with the request origin
+            $cookie = preg_replace('/;\s*Domain=[^;]*/i', '', $cookie);
+
+            // Ensure Secure flag matches our proxy setting
+            if ($secure && ! preg_match('/;\s*Secure/i', $cookie)) {
+                $cookie .= '; Secure';
+            }
+
+            // Ensure SameSite is set for cross-origin compatibility
+            if (! preg_match('/;\s*SameSite=/i', $cookie)) {
+                $cookie .= '; SameSite=Lax';
+            }
+
             // Use false for $replace to allow multiple Set-Cookie headers
             $response->headers->set('Set-Cookie', $cookie, false);
         }
