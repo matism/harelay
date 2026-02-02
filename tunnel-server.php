@@ -285,10 +285,14 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
         // Only these paths use ingress_session cookie
         // =========================================================================
         if (preg_match('#^/api/hassio_ingress/[^/]+/ws$#', $path)) {
+            tunnelLog("WS proxy: ingress path detected: {$path}");
+
             // For ingress, the ingress_session cookie IS the authentication
             $ingressSession = $request->cookie('ingress_session');
+            tunnelLog("WS proxy: ingress_session cookie: ".($ingressSession ? 'present ('.strlen($ingressSession).' chars)' : 'MISSING'));
+
             if (! $ingressSession) {
-                tunnelLog("WS proxy: ingress path missing ingress_session");
+                tunnelLog("WS proxy: ingress path missing ingress_session - closing");
                 $conn->close();
 
                 return;
