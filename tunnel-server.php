@@ -547,6 +547,11 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
     // HTTP Request Polling
     // ---------------------------------------------------------------------
     Timer::add(0.002, function () use (&$addonConnections) {  // 2ms polling for fast response
+        // Skip polling when no add-ons are connected (saves CPU in idle)
+        if (empty($addonConnections)) {
+            return;
+        }
+
         foreach ($addonConnections as $subdomain => $conn) {
             $pendingKey = "tunnel:pending:{$subdomain}";
             $requests = Cache::store('redis')->get($pendingKey, []);
