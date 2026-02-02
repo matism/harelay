@@ -179,6 +179,7 @@ return [
             'persistent' => true,
             'options' => [
                 'prefix' => null,
+                'serializer' => defined('Redis::SERIALIZER_IGBINARY') ? Redis::SERIALIZER_IGBINARY : 2,
             ],
         ],
 
