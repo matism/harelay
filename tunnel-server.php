@@ -546,7 +546,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
     // ---------------------------------------------------------------------
     // HTTP Request Polling
     // ---------------------------------------------------------------------
-    Timer::add(0.002, function () use (&$addonConnections) {  // 2ms polling for fast response
+    Timer::add(0.01, function () use (&$addonConnections) {  // 2ms polling for fast response
         // Skip polling when no add-ons are connected (saves CPU in idle)
         if (empty($addonConnections)) {
             return;
