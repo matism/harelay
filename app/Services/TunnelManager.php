@@ -22,6 +22,10 @@ class TunnelManager
 
     private const CANCELLED_TTL = 10; // seconds - short TTL for cancelled request markers
 
+    private const STATIC_CACHE_TTL = 86400; // 24 hours for static files
+
+    private const STATIC_CACHE_PATHS = ['/frontend_latest/', '/static/', '/hacsfiles/'];
+
     /**
      * Check if a tunnel connection is active.
      */
@@ -56,6 +60,18 @@ class TunnelManager
         array $headers,
         ?string $body = null
     ): ?array {
+        // Check if this is a cacheable static file (GET request to static paths)
+        $isCacheable = $method === 'GET' && $this->isStaticPath($uri);
+
+        // Check static cache first (skips entire tunnel round-trip)
+        if ($isCacheable) {
+            $staticCacheKey = $this->getStaticCacheKey($subdomain, $uri);
+            $cached = Cache::store('redis')->get($staticCacheKey);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
         $requestId = Str::uuid()->toString();
         $completed = false;
 
@@ -96,6 +112,12 @@ class TunnelManager
                 Cache::store('redis')->forget($responseKey);
                 $this->removePendingRequest($subdomain, $requestId);
 
+                // Cache successful static file responses
+                if ($isCacheable && ($response['status_code'] ?? 0) === 200) {
+                    $staticCacheKey = $this->getStaticCacheKey($subdomain, $uri);
+                    Cache::store('redis')->put($staticCacheKey, $response, self::STATIC_CACHE_TTL);
+                }
+
                 return $response;
             }
 
@@ -114,6 +136,25 @@ class TunnelManager
         $this->removePendingRequest($subdomain, $requestId);
 
         return null;
+    }
+
+    /**
+     * Check if a URI is a static cacheable path.
+     */
+    private function isStaticPath(string $uri): bool
+    {
+        foreach (self::STATIC_CACHE_PATHS as $path) {
+            if (str_starts_with($uri, $path)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function getStaticCacheKey(string $subdomain, string $uri): string
+    {
+        return self::CACHE_PREFIX.'static:'.$subdomain.':'.$uri;
     }
 
     /**
