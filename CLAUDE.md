@@ -429,6 +429,85 @@ sudo journalctl -u harelay-tunnel -f
 - **SESSION_DOMAIN must include dot prefix** - e.g., `.harelay.com` for cookies to work across subdomains
 - **Session cookie name is configurable** - defaults to `{app_name}-session`, read via `config('session.cookie')`
 
+## Performance & Caching
+
+### Known Issue: aiohttp Connection Pooling Corruption
+
+The add-on uses aiohttp for HTTP requests to Home Assistant. **Connection pooling causes response corruption** (NS_ERROR_CORRUPTED_CONTENT, wrong MIME types) under high concurrency.
+
+**Root cause:** When many concurrent requests share pooled connections, responses can get mixed up - a JS file request receives an HTML response, etc.
+
+**Current solution:** Per-request sessions with shared connector:
+```python
+async with aiohttp.ClientSession(connector=self.http_connector, connector_owner=False) as session:
+    async with session.request(...) as resp:
+        ...
+```
+
+This isolates session state per request while still sharing the connection pool. If corruption persists, fall back to `force_close=True` on the connector (disables connection reuse entirely).
+
+**Do NOT try:**
+- Shared session across all requests (causes corruption)
+- Semaphore-based concurrency limiting (doesn't fix the issue, just slows things down)
+- Content-Length validation with compression enabled (aiohttp auto-decompresses, sizes won't match)
+
+### Two-Level Static File Caching
+
+Static files (`/frontend_latest/`, `/static/`, `/hacsfiles/`) are cached at two levels:
+
+| Layer | Location | TTL | Benefit |
+|-------|----------|-----|---------|
+| **Laravel/Redis** | `TunnelManager.php` | 24 hours | Skips entire tunnel round-trip |
+| **Add-on memory** | `run.py` | Session lifetime | Skips HA request |
+
+**Cache keys:**
+- Laravel: `tunnel:static:{subdomain}:{uri}`
+- Add-on: In-memory dict keyed by URI
+
+**Flow:**
+1. Request comes to Laravel
+2. Check Redis cache → HIT = return immediately (no tunnel)
+3. Cache MISS → send through tunnel
+4. Add-on checks memory cache → HIT = return (no HA request)
+5. Cache MISS → request from HA
+6. Response cached at both levels for future requests
+
+**Cache invalidation:** Hashed filenames (e.g., `app.64d32f86.js`) mean content changes = new filename. No manual invalidation needed.
+
+### Browser Caching
+
+`ProxyController` adds aggressive caching headers for static assets:
+```php
+Cache-Control: public, max-age=31536000, immutable  // 1 year
+```
+
+This means after first load, browsers cache static files locally.
+
+### Local Add-on Development
+
+To test add-on changes without pushing to GitHub:
+
+1. Copy add-on to HA's local add-ons folder:
+```bash
+scp -r /path/to/harelay-addon/harelay root@<HA_IP>:/addons/harelay_local/
+```
+
+2. In HA: Settings → Add-ons → Add-on Store → ⋮ → Check for updates
+
+3. Install the local add-on
+
+4. For iterating:
+```bash
+scp /path/to/run.py root@<HA_IP>:/addons/harelay_local/
+ha addons restart local_harelay_local
+ha addons logs local_harelay_local -f
+```
+
+**Tip:** Add a version tag to startup log for verification:
+```python
+logger.info('HARelay Add-on starting... (v8-cache)')
+```
+
 ## Working Guidelines
 
 - **Always update documentation**: When adding features, commands, or changing behavior, update both `README.md` and `CLAUDE.md`

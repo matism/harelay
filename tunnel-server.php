@@ -279,9 +279,10 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
         $subdomain = strtolower($matches[1]);
 
         // Validate path - only HA WebSocket paths trigger transparent auth
+        // Supports: /api/websocket (main HA), /api/hassio_ingress/*/ws (add-on ingress)
         $path = $request->path();
-        if (! preg_match('#^/api/websocket$#', $path)) {
-            // Not /api/websocket - let onMessage handle with explicit auth message
+        if (! preg_match('#^(/api/websocket|/api/hassio_ingress/[^/]+/ws)$#', $path)) {
+            // Not a valid HA WebSocket path - let onMessage handle with explicit auth message
             return;
         }
 
@@ -394,7 +395,8 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             $path = $message['path'] ?? '/api/websocket';
 
             // Validate path to prevent path traversal
-            if (! preg_match('#^/api/websocket$#', $path)) {
+            // Supports: /api/websocket (main HA), /api/hassio_ingress/*/ws (add-on ingress)
+            if (! preg_match('#^(/api/websocket|/api/hassio_ingress/[^/]+/ws)$#', $path)) {
                 $conn->send(json_encode(['type' => 'error', 'error' => 'Invalid WebSocket path']));
                 $conn->close();
 
