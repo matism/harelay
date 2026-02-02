@@ -317,7 +317,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             $conn->streamId = bin2hex(random_bytes(16));
             $conn->transparentAuth = true;
 
-            tunnelLog("WS proxy: app_subdomain access {$subdomain} -> {$tunnelSubdomain}", true);
+            tunnelLog("WS proxy: app_subdomain access {$subdomain} -> {$tunnelSubdomain}");
 
             return;
         }
@@ -375,7 +375,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             'path' => $conn->path,
         ]));
 
-        tunnelLog("WS proxy: stream opened {$tunnelSubdomain} (stream={$conn->streamId})", true);
+        tunnelLog("WS proxy: stream opened {$tunnelSubdomain} (stream={$conn->streamId})");
     };
 
     $wsProxy->onMessage = function (TcpConnection $conn, $data) use (&$addonConnections, &$browserWsConnections, &$addonWsStreams) {
