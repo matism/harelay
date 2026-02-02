@@ -53,9 +53,6 @@ class ProxyController extends Controller
             }
         }
 
-        // Store context for response building
-        $request->attributes->set('is_app_subdomain', $isAppSubdomain);
-
         // Check tunnel connection (always uses the regular subdomain for tunnel operations)
         $tunnelSubdomain = $connection->subdomain;
         if (! $this->tunnelManager->isConnected($tunnelSubdomain)) {
@@ -67,7 +64,7 @@ class ProxyController extends Controller
         // Build request
         $method = $request->method();
         $uri = $request->getRequestUri();
-        $headers = $this->filterRequestHeaders($request->headers->all(), $request, $isAppSubdomain);
+        $headers = $this->filterRequestHeaders($request->headers->all(), $request);
         $body = $request->getContent();
         $contentType = $request->header('Content-Type', '');
 
@@ -93,14 +90,13 @@ class ProxyController extends Controller
             ], 504);
         }
 
-        // Use the original subdomain for cookie domain (app or regular)
-        return $this->buildResponse($response, $subdomain, $isAppSubdomain);
+        return $this->buildResponse($response, $subdomain);
     }
 
     /**
      * Filter headers that should be forwarded to Home Assistant.
      */
-    private function filterRequestHeaders(array $headers, Request $request, bool $isAppSubdomain = false): array
+    private function filterRequestHeaders(array $headers, Request $request): array
     {
         $skipHeaders = [
             'host',
@@ -116,24 +112,10 @@ class ProxyController extends Controller
             'x-csrf-token',
         ];
 
-        // For regular subdomain, filter cookies (HARelay handles auth)
-        // For app_subdomain, pass through all cookies (HA handles auth directly)
-        if (! $isAppSubdomain) {
-            $skipHeaders[] = 'cookie';
-        }
-
         $filtered = [];
         foreach ($headers as $name => $values) {
             if (! in_array(strtolower($name), $skipHeaders)) {
                 $filtered[$name] = is_array($values) ? implode(', ', $values) : $values;
-            }
-        }
-
-        // For regular subdomain, only forward ingress_session cookie
-        if (! $isAppSubdomain) {
-            $ingressSession = $request->cookie('ingress_session');
-            if ($ingressSession) {
-                $filtered['cookie'] = 'ingress_session='.$ingressSession;
             }
         }
 
@@ -149,7 +131,7 @@ class ProxyController extends Controller
     /**
      * Build an HTTP response from tunnel response data.
      */
-    private function buildResponse(array $responseData, string $subdomain, bool $isAppSubdomain = false): Response
+    private function buildResponse(array $responseData, string $subdomain): Response
     {
         $statusCode = $responseData['status_code'] ?? 502;
         $headers = $responseData['headers'] ?? [];
@@ -199,14 +181,8 @@ class ProxyController extends Controller
 
         $response = response($body, $statusCode, $filteredHeaders);
 
-        // Handle Set-Cookie headers
-        if ($isAppSubdomain) {
-            // For app_subdomain, pass through all Set-Cookie headers for HA auth
-            $this->passThruSetCookies($response, $headers, $subdomain);
-        } else {
-            // For regular subdomain, only rewrite ingress_session cookies
-            $this->rewriteIngressCookies($response, $headers, $subdomain);
-        }
+        // Pass through all Set-Cookie headers (strip Domain so browser uses request origin)
+        $this->passThruSetCookies($response, $headers, $subdomain);
 
         return $response;
     }
@@ -239,8 +215,7 @@ class ProxyController extends Controller
     }
 
     /**
-     * Pass through all Set-Cookie headers from HA for app_subdomain.
-     * This allows HA's auth cookies to work properly.
+     * Pass through all Set-Cookie headers from HA.
      * We strip the Domain attribute so the browser uses the request origin.
      */
     private function passThruSetCookies(Response $response, array $headers, string $subdomain): void
@@ -278,56 +253,4 @@ class ProxyController extends Controller
         }
     }
 
-    /**
-     * Rewrite ingress_session Set-Cookie headers to use HARelay domain.
-     */
-    private function rewriteIngressCookies(Response $response, array $headers, string $subdomain): void
-    {
-        $proxyDomain = config('app.proxy_domain', 'harelay.com');
-        $cookieDomain = "{$subdomain}.{$proxyDomain}";
-        $secure = config('app.proxy_secure', true);
-
-        // Find Set-Cookie headers (can be array or string)
-        $setCookies = $headers['Set-Cookie'] ?? $headers['set-cookie'] ?? null;
-        if (! $setCookies) {
-            return;
-        }
-
-        // Normalize to array
-        if (! is_array($setCookies)) {
-            $setCookies = [$setCookies];
-        }
-
-        foreach ($setCookies as $cookie) {
-            // Only rewrite ingress_session cookies
-            if (! str_starts_with($cookie, 'ingress_session=')) {
-                continue;
-            }
-
-            // Parse the cookie value
-            if (preg_match('/^ingress_session=([^;]+)/', $cookie, $matches)) {
-                $value = trim($matches[1]);
-
-                // Extract Path if present (usually /api/hassio_ingress/)
-                $path = '/';
-                if (preg_match('/Path=([^;]+)/i', $cookie, $pathMatches)) {
-                    $path = trim($pathMatches[1]);
-                }
-
-                // Set the cookie with HARelay domain
-                $response->headers->setCookie(
-                    cookie(
-                        name: 'ingress_session',
-                        value: $value,
-                        minutes: 60 * 24,  // 24 hours
-                        path: $path,
-                        domain: $cookieDomain,
-                        secure: $secure,
-                        httpOnly: true,
-                        sameSite: 'Lax'
-                    )
-                );
-            }
-        }
-    }
 }

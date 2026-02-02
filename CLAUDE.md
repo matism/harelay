@@ -8,8 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Key Components
 
-- **Marketing Site**: Landing page, pricing, how-it-works
-- **User Dashboard**: Connection management, setup guide, settings
+- **Marketing Site**: Landing page, pricing, how-it-works, comparison pages
+- **User Dashboard**: Connection management, setup guide, settings, 2FA
 - **Tunnel Server**: Workerman-based WebSocket server (`tunnel-server.php`)
 - **Proxy System**: Routes subdomain requests through WebSocket tunnel to Home Assistant
 
@@ -44,7 +44,7 @@ php artisan optimize:clear
 ## Architecture
 
 - **Framework**: Laravel 12 with Vite and Tailwind CSS 4
-- **Authentication**: Laravel Breeze (Blade)
+- **Authentication**: Laravel Breeze (Blade) with optional 2FA
 - **Tunnel Server**: Workerman WebSocket (ports 8081 + 8082)
 - **Database**: MySQL (production), SQLite (development/testing)
 - **Queue**: Database driver
@@ -53,7 +53,7 @@ php artisan optimize:clear
 
 ### Database Tables
 
-- `users` - User accounts (Breeze), includes `can_set_subdomain` flag for custom subdomain permission
+- `users` - User accounts (Breeze), includes `can_set_subdomain` flag for custom subdomain permission, 2FA columns
 - `ha_connections` - User's HA connection (subdomain, app_subdomain [optional], connection_token, status, last_connected_at, bytes_in, bytes_out)
 - `subscriptions` - User subscription plans
 - `device_codes` - Device pairing codes for add-on setup (expires after 15 minutes)
@@ -79,7 +79,7 @@ app/
 │       └── CheckSubscription.php
 ├── Models/
 │   ├── User.php
-│   ├── HaConnection.php               # Has getProxyUrl(), traffic formatting helpers
+│   ├── HaConnection.php               # Has getProxyUrl(), findBySubdomain(), traffic formatting
 │   ├── Subscription.php
 │   └── DeviceCode.php                 # Device pairing codes
 ├── Services/
@@ -135,7 +135,7 @@ The tunnel-server gets the prefix via `config('database.redis.options.prefix')` 
 2. `SubdomainProxy` middleware detects subdomain, calls `ProxyController`
 3. `ProxyController` verifies auth and ownership
 4. `TunnelManager::proxyRequest()` stores request in Redis
-5. `tunnel-server.php` polls Redis, sends request to add-on via WebSocket
+5. `tunnel-server.php` polls Redis (2ms interval), sends request to add-on via WebSocket
 6. Add-on forwards to Home Assistant, returns response via WebSocket
 7. `tunnel-server.php` stores response in Redis
 8. `TunnelManager` retrieves response and returns to user
@@ -173,15 +173,26 @@ The HA add-on (`../harelay-addon/`) connects via WebSocket to port 8081:
 **WebSocket Proxy:**
 ```json
 ← {"type": "ws_open", "stream_id": "id", "path": "/api/websocket"}
+← {"type": "ws_open", "stream_id": "id", "path": "/api/hassio_ingress/.../ws", "ingress_session": "..."}
 ← {"type": "ws_message", "stream_id": "id", "message": "..."}
 → {"type": "ws_message", "stream_id": "id", "message": "..."}
+→ {"type": "ws_closed", "stream_id": "id"}
 ← {"type": "ws_close", "stream_id": "id"}
 ```
 
-**Heartbeat:**
+Note: `ingress_session` is only included for ingress WebSocket paths. The add-on uses this to authenticate with HA's ingress system.
+
+**Heartbeat/Keepalive:**
 ```json
 → {"type": "heartbeat"}
 ← {"type": "pong"}
+← {"type": "ping"}  (server-initiated)
+→ {"type": "pong"}
+```
+
+**Subdomain Changed (after user changes subdomain):**
+```json
+← {"type": "subdomain_changed", "old_subdomain": "abc123", "new_subdomain": "myha"}
 ```
 
 ## Testing
@@ -225,14 +236,16 @@ Valet automatically handles wildcard subdomains: `https://{subdomain}.harelay.te
 
 ### HA Add-on
 
-The Home Assistant add-on is in a separate repository at `../harelay-addon/` (current version: 1.2.3). It's a Python WebSocket client that:
+The Home Assistant add-on is in a separate repository at `../harelay-addon/` (current version: 1.4.2). It's a Python asyncio WebSocket client that:
 - Connects to the tunnel server on port 8081
 - Authenticates with subdomain and token
 - Proxies HTTP requests to local Home Assistant
-- Proxies WebSocket connections for real-time features
+- Proxies WebSocket connections for real-time features (main HA + ingress add-ons)
 - Supports device code pairing (leave credentials empty to start pairing mode)
 - Stores credentials in `/data/credentials.json` (hidden from HA config UI)
 - Has retry logic with exponential backoff for rate-limited API calls (429 errors)
+- Uses LRU cache (100MB max) for static file responses
+- Includes health check with 60-second timeout for detecting stale connections
 
 ### Device Code Pairing Flow
 
@@ -305,9 +318,9 @@ Three WebSocket paths are proxied to the tunnel server (see `DEPLOYMENT.md` for 
 - Users must be authenticated to access their subdomain
 - Owner verification on all proxy requests
 - Subdomain sanitization: `preg_replace('/[^a-z0-9]/', '', $subdomain)`
-- WebSocket path validation: only `/api/websocket` path allowed for transparent proxy
-- Stream IDs use cryptographically secure random bytes
-- Security headers on proxy responses (X-Robots-Tag, X-Frame-Options)
+- WebSocket path validation: only `/api/websocket` and `/api/hassio_ingress/{token}/ws` allowed
+- Stream IDs use cryptographically secure random bytes (32 hex chars)
+- Security headers on proxy responses (X-Robots-Tag, X-Frame-Options) - relaxed for app_subdomain
 - Device codes expire after 15 minutes
 - Plain tokens stored temporarily in device_codes, cleared after first poll
 
@@ -326,13 +339,53 @@ Three WebSocket paths are proxied to the tunnel server (see `DEPLOYMENT.md` for 
 Each connection can optionally have an `app_subdomain` for mobile app access without login:
 
 - **Regular subdomain**: Requires HARelay login (safe to share)
-- **App subdomain**: 32-character random string, no login required (URL is the auth)
+- **App subdomain**: 32-character random string, no HARelay login required (URL is the auth)
 
 **Implementation details:**
 - `findConnectionBySubdomain()` in tunnel-server checks both `subdomain` and `app_subdomain` columns
-- `ProxyController` and tunnel-server WebSocket proxy skip auth for app_subdomain requests
+- `ProxyController` and tunnel-server WebSocket proxy skip HARelay auth for app_subdomain requests
 - Users generate/revoke app_subdomain from Settings page
 - Security: 36^32 ≈ 6.3 × 10^49 combinations makes brute-force impossible
+
+**IMPORTANT - App Subdomain vs Regular Subdomain Differences:**
+
+| Aspect | Regular Subdomain | App Subdomain |
+|--------|-------------------|---------------|
+| HARelay auth | Required (verifies ownership) | Not required (URL is auth) |
+| HA auth | Required (after HARelay login) | Required (directly) |
+| Cookies | Filtered (only `ingress_session` for HA add-ons) | All cookies passed through (HA needs them for auth) |
+| Set-Cookie | Only `ingress_session` rewritten | All cookies passed through (domain stripped) |
+| Security headers | CSP and Cache-Control set by HARelay | Let HA control headers |
+| Use case | Web browser with HARelay account | Mobile apps, direct HA access |
+
+**Why Cookie Handling Differs:**
+
+Both subdomain types require logging into Home Assistant (HA uses auth tokens stored in localStorage, not cookies). The difference is only the HARelay layer:
+
+- **Regular subdomain**: User logs into HARelay first (verifies ownership), then logs into HA. We filter out all cookies except `ingress_session` (needed for HA add-on ingress authentication).
+- **App subdomain**: No HARelay login required (URL is the auth). User logs into HA directly. All cookies pass through in case HA or its integrations need them.
+
+**Cookie Handling for App Subdomain:**
+
+Since app_subdomain bypasses HARelay auth, all cookies pass through in case HA or its integrations need them:
+
+1. **Request cookies**: All browser cookies forwarded to HA (not filtered like regular subdomain)
+2. **Response cookies**: All `Set-Cookie` headers from HA passed through with:
+   - `Domain` attribute stripped (browser uses request origin)
+   - `Secure` flag added if proxy uses HTTPS
+   - `SameSite=Lax` added if not present
+3. **Security headers**: CSP and Cache-Control not overwritten (HA controls these)
+
+Note: HA's main authentication uses tokens stored in localStorage, not cookies. The `ingress_session` cookie is specifically for HA add-on ingress functionality.
+
+**HA Login Persistence on App Subdomain:**
+
+When logging into HA via app_subdomain, users must check **"Angemeldet bleiben" / "Stay logged in"** for the auth token to persist in localStorage. Without this checkbox:
+- Token is kept in memory only
+- Works during the session
+- Lost on page refresh (user must log in again)
+
+This is HA's intended behavior, not a HARelay bug.
 
 ## Data Transfer Tracking
 
@@ -422,12 +475,33 @@ sudo journalctl -u harelay-tunnel -f
 
 ### WebSocket Proxy
 - **Cookie header is required for session auth** - nginx must forward `Cookie $http_cookie` to port 8082
-- **Only `/api/websocket` path is allowed** - this is validated in tunnel-server to prevent abuse
+- **Only `/api/websocket` path is allowed** for main HA WebSocket - validated in tunnel-server
+- **Ingress paths** (`/api/hassio_ingress/{token}/ws`) are also supported for HA add-on WebSockets
 - **`tunnelSubdomain` vs `subdomain`** - when user accesses via app_subdomain, `tunnelSubdomain` is the regular subdomain used for add-on communication
+- **Ingress WebSocket** requires `ingress_session` cookie - passed from browser through tunnel to add-on
+
+### Ingress WebSocket Support
+
+HA add-ons (like code-server, Terminal) use ingress WebSockets at `/api/hassio_ingress/{token}/ws`. These require special handling:
+
+1. **tunnel-server.php** detects ingress paths via regex: `^/api/hassio_ingress/[^/]+/ws$`
+2. **ingress_session cookie** is extracted and passed to add-on in `ws_open` message
+3. **Add-on** creates WebSocket to HA with the cookie in headers:
+   ```python
+   ws_headers = [('Cookie', f'ingress_session={ingress_session}')]
+   ha_ws = await websockets.connect(url, additional_headers=ws_headers, ...)
+   ```
+4. **PermissiveDeflateFactory** handles HA's permessage-deflate negotiation quirks
 
 ### Session Authentication
 - **SESSION_DOMAIN must include dot prefix** - e.g., `.harelay.com` for cookies to work across subdomains
 - **Session cookie name is configurable** - defaults to `{app_name}-session`, read via `config('session.cookie')`
+- **Don't set cookie back on subdomain** - only read session, don't write. Writing causes logout on main domain.
+
+### IP Address Consistency
+- **HA rejects auth if IP changes during login_flow**
+- Always set `X-Forwarded-For` and `X-Real-IP` headers with client IP
+- This ensures consistent IP throughout the auth flow
 
 ## Performance & Caching
 
@@ -450,6 +524,46 @@ This isolates session state per request while still sharing the connection pool.
 - Shared session across all requests (causes corruption)
 - Semaphore-based concurrency limiting (doesn't fix the issue, just slows things down)
 - Content-Length validation with compression enabled (aiohttp auto-decompresses, sizes won't match)
+
+### Add-on Stability Improvements (v1.4.2)
+
+The add-on has several stability improvements to handle concurrent WebSocket streams and proper cleanup:
+
+**WebSocket Stream Locking:**
+```python
+# Each stream has its own lock to prevent race conditions
+async def _get_stream_lock(self, stream_id: str) -> asyncio.Lock:
+    async with self._locks_lock:  # Lock for creating locks
+        if stream_id not in self._ws_locks:
+            self._ws_locks[stream_id] = asyncio.Lock()
+        return self._ws_locks[stream_id]
+```
+
+**Task Management:**
+- All async tasks tracked in `_active_tasks` set
+- Proper cancellation handling with `asyncio.CancelledError`
+- Cleanup of locks, streams, and pending messages on shutdown
+- Graceful shutdown via `_shutdown_event`
+
+**Health Checks:**
+- `HEALTH_CHECK_TIMEOUT = 60` seconds - forces reconnect if server stops responding
+- Heartbeat loop sends keepalive every 30 seconds
+- Server-side keepalive check closes stale connections after 60 seconds
+
+**Multiple Response Headers:**
+
+When HA sends multiple headers with the same name (e.g., multiple `Set-Cookie`), aiohttp's `dict(resp.headers)` only keeps the last value. Fixed by:
+```python
+response_headers = {}
+for key, value in resp.headers.items():
+    if key in response_headers:
+        if isinstance(response_headers[key], list):
+            response_headers[key].append(value)
+        else:
+            response_headers[key] = [response_headers[key], value]
+    else:
+        response_headers[key] = value
+```
 
 ### Two-Level Static File Caching
 
@@ -483,6 +597,17 @@ Cache-Control: public, max-age=31536000, immutable  // 1 year
 
 This means after first load, browsers cache static files locally.
 
+### Request Cancellation
+
+When a client disconnects mid-request:
+1. `TunnelManager` registers shutdown function
+2. Marks request as cancelled in Redis (`tunnel:cancelled:{requestId}`)
+3. Removes from pending queue
+4. Tunnel server checks cancelled flag before processing
+5. Discards response if request was cancelled
+
+This prevents wasted processing and stale responses.
+
 ### Local Add-on Development
 
 To test add-on changes without pushing to GitHub:
@@ -508,6 +633,126 @@ ha addons logs local_harelay_local -f
 logger.info('HARelay Add-on starting... (v8-cache)')
 ```
 
+## Debugging Tips
+
+### App Subdomain Auth Issues
+
+If users report auth not persisting on app_subdomain:
+
+1. **Check "Stay logged in" checkbox** - HA only saves tokens to localStorage if this is checked
+2. **Check browser console** for JavaScript errors
+3. **Check Network tab** - verify `/auth/token` returns valid `access_token`
+4. **Check Application → Local Storage** - look for `hassTokens` key
+
+If `ha-version` is saved but `hassTokens` is not, the user simply didn't check "Stay logged in".
+
+### Cookie Issues
+
+If cookies aren't working:
+
+1. **Check Set-Cookie headers** in Network tab - are they being set?
+2. **Check cookie Domain attribute** - should match request origin or be absent
+3. **Check Secure flag** - must match HTTPS setting
+4. **Check SameSite** - should be `Lax` for cross-origin compatibility
+
+For app_subdomain, cookies should pass through with Domain stripped. For regular subdomain, only `ingress_session` is handled.
+
+### WebSocket Connection Issues
+
+1. **Check nginx config** - must forward `Cookie` header to port 8082
+2. **Check tunnel-server logs** - enable `TUNNEL_DEBUG=true`
+3. **Check add-on logs** - `ha addons logs local_harelay`
+4. **Verify path** - main HA uses `/api/websocket`, ingress uses `/api/hassio_ingress/{token}/ws`
+
+### Add-on Stability Issues
+
+If add-on crashes or connections drop:
+
+1. **Check for Python errors** in add-on logs
+2. **Verify asyncio task cleanup** - tasks should be cancelled on shutdown
+3. **Check health timeout** - connection considered stale after 60s without response
+4. **Memory usage** - static cache limited to 100MB
+
+### Subdomain Change Issues
+
+If subdomain change doesn't propagate:
+
+1. **Check Redis pub/sub** - `redis-cli monitor` should show `tunnel:subdomain_changes`
+2. **Check tunnel-server logs** - should show "Subdomain change:" message
+3. **Verify add-on receives notification** - should reconnect with new subdomain
+
+## Development History & Lessons Learned
+
+### What We Tried That Didn't Work
+
+#### Redis BLPOP for Request Handling
+- **Tried:** Using BLPOP for blocking reads instead of polling
+- **Problem:** Doesn't work reliably in Workerman's long-running process
+- **Solution:** Reverted to polling with fast interval (2ms)
+
+#### Header Stripping / Service Worker
+- **Tried:** More aggressive header stripping and service worker caching
+- **Problem:** Caused issues with HA's frontend
+- **Solution:** Reverted, increased TTL instead
+
+#### Auto-auth with Supervisor Token
+- **Tried:** Automatically authenticating app_subdomain WebSocket with supervisor token
+- **Problem:** Would bypass HA login entirely (security issue)
+- **Solution:** User must log in to HA directly on app_subdomain
+
+#### Shared aiohttp Session
+- **Tried:** Single aiohttp session for all requests (connection pooling)
+- **Problem:** Response corruption under high concurrency
+- **Solution:** Per-request sessions with shared connector
+
+### Issues That Were Fixed
+
+#### IP Address Changed During Auth
+- **Issue:** HA rejects auth if IP changes during login_flow
+- **Fix:** Always set X-Forwarded-For with client IP
+
+#### Session Logout on Main Domain
+- **Issue:** Writing session cookie on subdomain caused logout on main domain
+- **Fix:** Only read session, never write cookie back on subdomain
+
+#### Custom Subdomain Validation
+- **Issue:** Regex assumed 8-character subdomains
+- **Fix:** Allow 2-32 characters for custom subdomains
+
+#### Ingress WebSocket Authentication
+- **Issue:** Ingress add-ons (code-server, Terminal) WebSockets failing
+- **Fix:** Extract and pass `ingress_session` cookie through tunnel
+
+#### Wrong Subdomain Caching
+- **Issue:** Static files cached without subdomain in key
+- **Fix:** Include subdomain in cache key: `tunnel:static:{subdomain}:{uri}`
+
+#### Client Disconnect Handling
+- **Issue:** Requests continued processing after client disconnected
+- **Fix:** Track cancelled requests, clean up properly
+
+## Known Limitations
+
+1. **HA token persistence requires user action** - "Stay logged in" must be checked on app_subdomain
+2. **localStorage is per-origin** - tokens saved on regular subdomain aren't available on app_subdomain (different origins)
+3. **Ingress session cookies** - must be passed through for HA add-on WebSockets to work
+4. **Multiple Set-Cookie headers** - special handling needed (aiohttp `dict()` loses duplicates)
+5. **Blocking Redis operations** - don't work in Workerman, must use polling
+
+## Things We Tried That Didn't Fix the Issue
+
+When debugging app_subdomain auth persistence (token not saved to localStorage):
+
+1. **Cookie pass-through** - Enabled passing all cookies for app_subdomain. Necessary for auth flow but doesn't affect localStorage.
+2. **Set-Cookie domain stripping** - Strips Domain attribute so browser uses request origin. Correct but doesn't affect localStorage.
+3. **CSP header removal** - Removed restrictive CSP for app_subdomain. Doesn't affect localStorage.
+4. **Cache-Control changes** - Let HA control cache headers on app_subdomain. Doesn't affect localStorage.
+5. **Auto-auth with supervisor token** - Attempted to auto-authenticate WebSocket with supervisor token for app_subdomain. **WRONG APPROACH** - this would bypass HA login entirely, which is a security issue.
+
+**The actual fix:** User needs to check "Stay logged in" / "Angemeldet bleiben" during HA login. This is HA's intended behavior - without it, tokens are memory-only.
+
+The cookie/header changes ARE still necessary for the auth flow to work, but they don't affect whether the token is persisted to localStorage. That's purely controlled by HA's frontend based on the checkbox.
+
 ## Working Guidelines
 
 - **Always update documentation**: When adding features, commands, or changing behavior, update both `README.md` and `CLAUDE.md`
@@ -515,3 +760,6 @@ logger.info('HARelay Add-on starting... (v8-cache)')
 - **Format code**: Run `./vendor/bin/pint` before committing
 - **Check nginx config**: When debugging WebSocket issues, verify nginx forwards required headers
 - **Test both subdomain types**: When changing proxy/WebSocket code, test both regular and app subdomains
+- **Check add-on version**: The add-on at `../harelay-addon/` should be kept in sync with server changes
+- **Don't use blocking Redis**: Always use polling, not BLPOP/BRPOP
+- **Preserve IP consistency**: Always forward X-Forwarded-For for HA auth flows

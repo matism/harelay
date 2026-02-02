@@ -13,6 +13,10 @@ HARelay provides a secure tunnel between your Home Assistant instance and the in
 - End-to-end encryption via TLS
 - Session-based authentication
 - Full WebSocket support for real-time Home Assistant features
+- Mobile app access via long-form app subdomain (no login required)
+- Device code pairing for easy add-on setup
+- Two-factor authentication support
+- Data transfer tracking
 
 ## Architecture
 
@@ -54,6 +58,7 @@ The dashboard auto-refreshes when the connection status changes, showing real-ti
 - PHP 8.2+
 - Composer
 - Node.js 20.19+ or 22.12+ (for Vite)
+- Redis (required for tunnel IPC)
 - MySQL/PostgreSQL (production) or SQLite (development)
 
 ## Quick Start
@@ -96,6 +101,10 @@ APP_PROXY_SECURE=false
 SESSION_DOMAIN=.harelay.test
 
 DB_CONNECTION=sqlite
+
+# Redis is required for tunnel communication
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
 ```
 
 ### Local Development with Valet
@@ -131,339 +140,54 @@ composer test
 ./vendor/bin/pint
 ```
 
+## Subdomain Types
+
+HARelay supports three subdomain types:
+
+| Type | Length | Auth Required | Use Case |
+|------|--------|---------------|----------|
+| Auto-generated | 8 chars | Yes | Default for new users |
+| Custom | 2-32 chars | Yes | Users with permission |
+| App subdomain | 32 chars | No | Mobile app access |
+
+**App Subdomain**: A 32-character random string that allows access without HARelay login. The URL itself is the authentication - users still need to log into Home Assistant directly. Generated from the Settings page.
+
 ## Production Deployment (Ubuntu/DigitalOcean)
 
-### 1. Server Setup
+See `DEPLOYMENT.md` for comprehensive deployment instructions.
 
-```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
+### Quick Overview
 
-# Install PHP 8.2+ and extensions
-sudo apt install -y php8.2-fpm php8.2-mysql php8.2-mbstring php8.2-xml \
-    php8.2-curl php8.2-zip php8.2-bcmath php8.2-sqlite3
+1. **Server Setup**: Ubuntu 24.04 LTS, PHP 8.3, MySQL/PostgreSQL, Redis, Nginx
+2. **SSL Certificates**: Let's Encrypt with wildcard certificate for subdomains
+3. **Systemd Services**: Tunnel server and queue worker as background services
+4. **Zero-Downtime Deploys**: Symlink-based deployment with instant rollback
 
-# Install Composer
-curl -sS https://getcomposer.org/installer | php
-sudo mv composer.phar /usr/local/bin/composer
+### Key Nginx Configuration
 
-# Install Node.js 22
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# Install Nginx
-sudo apt install -y nginx
-
-# Install MySQL
-sudo apt install -y mysql-server
-sudo mysql_secure_installation
-```
-
-### 2. Application Setup
-
-```bash
-# Create web directory
-sudo mkdir -p /var/www/harelay
-sudo chown $USER:$USER /var/www/harelay
-
-# Clone and install
-cd /var/www/harelay
-git clone https://github.com/your-org/harelay.git .
-composer install --no-dev --optimize-autoloader
-npm ci && npm run build
-
-# Environment
-cp .env.example .env
-php artisan key:generate
-```
-
-### 3. Configure Environment
-
-Edit `/var/www/harelay/.env`:
-
-```env
-APP_NAME=HARelay
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://harelay.com
-APP_PROXY_DOMAIN=harelay.com
-APP_PROXY_PORT=
-APP_PROXY_SECURE=true
-
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_DATABASE=harelay
-DB_USERNAME=harelay
-DB_PASSWORD=your_secure_password
-
-SESSION_DRIVER=database
-SESSION_DOMAIN=.harelay.com
-
-CACHE_STORE=database
-QUEUE_CONNECTION=database
-
-# Tunnel server
-TUNNEL_HOST=0.0.0.0
-TUNNEL_PORT=8081
-WS_PROXY_PORT=8082
-WS_PROXY_PATH=/wss
-TUNNEL_DEBUG=false
-```
-
-### 4. Database Setup
-
-```bash
-# Create database and user
-sudo mysql -u root -p <<EOF
-CREATE DATABASE harelay;
-CREATE USER 'harelay'@'localhost' IDENTIFIED BY 'your_secure_password';
-GRANT ALL PRIVILEGES ON harelay.* TO 'harelay'@'localhost';
-FLUSH PRIVILEGES;
-EOF
-
-# Run migrations
-php artisan migrate --force
-```
-
-### 5. SSL Certificates (Let's Encrypt)
-
-```bash
-# Install Certbot
-sudo apt install -y certbot python3-certbot-nginx
-
-# Get certificates (main domain)
-sudo certbot certonly --nginx -d harelay.com -d www.harelay.com
-
-# Get wildcard certificate (requires DNS validation)
-sudo certbot certonly --manual --preferred-challenges=dns \
-    -d "*.harelay.com" --agree-tos
-```
-
-### 6. Nginx Configuration
-
-Create `/etc/nginx/sites-available/harelay`:
+Three WebSocket paths must be proxied:
 
 ```nginx
-# Main domain (harelay.com)
-server {
-    listen 80;
-    server_name harelay.com www.harelay.com;
-    return 301 https://$server_name$request_uri;
+# Add-on connections (port 8081)
+location /tunnel {
+    proxy_pass http://127.0.0.1:8081;
+    # ... WebSocket headers
 }
 
-server {
-    listen 443 ssl http2;
-    server_name harelay.com www.harelay.com;
-
-    ssl_certificate /etc/letsencrypt/live/harelay.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/harelay.com/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
-    ssl_prefer_server_ciphers off;
-
-    root /var/www/harelay/public;
-    index index.php;
-
-    add_header X-Frame-Options "SAMEORIGIN";
-    add_header X-Content-Type-Options "nosniff";
-
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-
-    location ~ /\.(?!well-known).* {
-        deny all;
-    }
+# Browser WebSocket - MUST include Cookie header
+location /api/websocket {
+    proxy_pass http://127.0.0.1:8082;
+    proxy_set_header Cookie $http_cookie;  # CRITICAL
+    # ... WebSocket headers
 }
 
-# Wildcard subdomains (*.harelay.com)
-server {
-    listen 80;
-    server_name *.harelay.com;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name *.harelay.com;
-
-    ssl_certificate /etc/letsencrypt/live/harelay.com-0001/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/harelay.com-0001/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
-    ssl_prefer_server_ciphers off;
-
-    root /var/www/harelay/public;
-    index index.php;
-
-    add_header X-Robots-Tag "noindex, nofollow";
-    add_header X-Frame-Options "SAMEORIGIN";
-    add_header X-Content-Type-Options "nosniff";
-
-    # Tunnel WebSocket (for Home Assistant add-on connections)
-    location /tunnel {
-        proxy_pass http://127.0.0.1:8081;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 86400;
-        proxy_send_timeout 86400;
-    }
-
-    # Transparent WebSocket proxy for Home Assistant
-    # Only matches actual WebSocket upgrade requests, not regular HTTP
-    location = /api/websocket {
-        proxy_pass http://127.0.0.1:8082;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header Cookie $http_cookie;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_read_timeout 86400;
-    }
-
-    # Alternative WebSocket path (uses explicit message-based auth instead of cookies)
-    location /wss {
-        proxy_pass http://127.0.0.1:8082;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_read_timeout 86400;
-    }
-
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-
-    location ~ /\.(?!well-known).* {
-        deny all;
-    }
+# Legacy WebSocket path
+location /wss {
+    proxy_pass http://127.0.0.1:8082;
+    proxy_set_header Cookie $http_cookie;
+    # ... WebSocket headers
 }
 ```
-
-Enable the site:
-
-```bash
-sudo ln -s /etc/nginx/sites-available/harelay /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-### 7. Tunnel Server Service
-
-Create `/etc/systemd/system/harelay-tunnel.service`:
-
-```ini
-[Unit]
-Description=HARelay Tunnel Server
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/var/www/harelay
-ExecStart=/usr/bin/php tunnel-server.php start
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable harelay-tunnel
-sudo systemctl start harelay-tunnel
-```
-
-### 8. Queue Worker Service
-
-Create `/etc/systemd/system/harelay-queue.service`:
-
-```ini
-[Unit]
-Description=HARelay Queue Worker
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/var/www/harelay
-ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable harelay-queue
-sudo systemctl start harelay-queue
-```
-
-### 9. File Permissions
-
-```bash
-sudo chown -R www-data:www-data /var/www/harelay
-sudo chmod -R 755 /var/www/harelay
-sudo chmod -R 775 /var/www/harelay/storage
-sudo chmod -R 775 /var/www/harelay/bootstrap/cache
-```
-
-### 10. Firewall Configuration
-
-```bash
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
-```
-
-Note: Ports 8081 (add-on tunnel) and 8082 (browser WebSocket) don't need to be exposed - Nginx proxies to them on localhost via `/tunnel` and `/api/websocket` paths.
-
-### Deployment Updates (Zero-Downtime)
-
-Use the included deploy script for zero-downtime deployments:
-
-```bash
-sudo /var/www/harelay/current/deploy.sh
-```
-
-This script:
-- Creates a new release directory
-- Updates code via git
-- Links shared `.env` and `storage`
-- Installs dependencies and builds assets
-- Runs migrations
-- Atomically switches the symlink (zero downtime)
-- Restarts services
-- Keeps last 5 releases for easy rollback
-
-See `DEPLOYMENT.md` for full deployment documentation.
 
 ## Environment Variables
 
@@ -477,6 +201,9 @@ See `DEPLOYMENT.md` for full deployment documentation.
 | `WS_PROXY_PORT` | WebSocket proxy port | `8082` |
 | `WS_PROXY_PATH` | WebSocket path for production (e.g., `/wss`) | - |
 | `SESSION_DOMAIN` | Cookie domain (use `.domain.com` for subdomains) | - |
+| `REDIS_HOST` | Redis server host (required) | `127.0.0.1` |
+| `REDIS_PORT` | Redis server port | `6379` |
+| `TUNNEL_DEBUG` | Enable verbose logging | `false` |
 
 ## Database Schema
 
@@ -486,7 +213,8 @@ See `DEPLOYMENT.md` for full deployment documentation.
 |--------|------|-------------|
 | id | bigint | Primary key |
 | user_id | bigint | Foreign key to users |
-| subdomain | string | Unique 16-character subdomain (e.g., "a1b2c3d4e5f6g7h8") |
+| subdomain | string | Unique 8-character subdomain (e.g., "a1b2c3d4") |
+| app_subdomain | string | Optional 32-character subdomain for mobile apps |
 | connection_token | string | Hashed authentication token |
 | status | enum | `connected` or `disconnected` |
 | last_connected_at | timestamp | Last heartbeat time |
@@ -527,8 +255,10 @@ Unique index on `(ha_connection_id, date)` for efficient upserts. Updated atomic
 5. **No Port Exposure**: Home Assistant never exposes ports to the internet
 6. **Token Rotation**: Users can regenerate tokens if compromised
 7. **No Crawling**: Subdomain routes include `X-Robots-Tag: noindex` headers
-8. **Long Subdomains**: 16-character subdomains (36^16 combinations) prevent brute-force discovery
-9. **Device Code Expiry**: Pairing codes expire after 15 minutes and are single-use
+8. **Long Subdomains**: 8-character subdomains (36^8 combinations) prevent brute-force discovery
+9. **App Subdomain Security**: 32-character app subdomains (36^32 ≈ 6.3 × 10^49 combinations) make guessing impossible
+10. **Device Code Expiry**: Pairing codes expire after 15 minutes and are single-use
+11. **Two-Factor Authentication**: Optional 2FA for user accounts
 
 ## Troubleshooting
 
@@ -537,19 +267,28 @@ Unique index on `(ha_connection_id, date)` for efficient upserts. Updated atomic
 1. Check the add-on logs in Home Assistant
 2. Verify the connection token is correct
 3. Ensure Home Assistant has internet access
-4. Check if port 8081 is accessible on the server
+4. Check if the tunnel server is running: `systemctl status harelay-tunnel`
 
 ### Request Timeout (504)
 
 1. Home Assistant may be slow to respond
 2. Check HA logs for errors
 3. Verify the add-on is connected
+4. Check tunnel server logs for errors
 
 ### WebSocket not working
 
-1. Check if `/wss` path is proxied correctly in Nginx
-2. Verify the tunnel server is running: `systemctl status harelay-tunnel`
-3. Check browser console for WebSocket errors
+1. Check if `/api/websocket` path is proxied correctly in Nginx
+2. **Critical**: Verify `proxy_set_header Cookie $http_cookie;` is present
+3. Verify the tunnel server is running: `systemctl status harelay-tunnel`
+4. Check browser console for WebSocket errors
+5. Enable `TUNNEL_DEBUG=true` and check logs
+
+### Authentication issues on app_subdomain
+
+1. User must check "Stay logged in" / "Angemeldet bleiben" during HA login
+2. This is required for tokens to persist in localStorage
+3. Without this checkbox, tokens are memory-only and lost on refresh
 
 ### Check Tunnel Server Status
 
@@ -559,11 +298,50 @@ sudo journalctl -u harelay-tunnel -f
 
 # View queue worker logs
 sudo journalctl -u harelay-queue -f
+
+# Watch Redis activity
+redis-cli monitor
 ```
 
 ## Home Assistant Add-on
 
 The HA add-on is maintained in a separate repository. See the [ha-addon](https://github.com/harelay/ha-addon) repository for installation and development instructions.
+
+### Key Features
+- Automatic reconnection with exponential backoff
+- Device code pairing mode
+- LRU cache for static files (100MB)
+- Health check with 60-second timeout
+- Ingress WebSocket support for HA add-ons
+
+## API Endpoints
+
+### Public API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/device/code` | POST | Generate device pairing code |
+| `/api/device/poll/{code}` | GET | Poll for pairing completion |
+| `/api/connection/status` | GET | Check connection status (auth required) |
+
+### Web Routes
+
+| Route | Description |
+|-------|-------------|
+| `/link` | Device pairing page |
+| `/dashboard` | User dashboard |
+| `/dashboard/setup` | Setup guide |
+| `/dashboard/settings` | Connection settings |
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch: `git checkout -b feature/my-feature`
+3. Run tests: `composer test`
+4. Format code: `./vendor/bin/pint`
+5. Commit your changes
+6. Push to the branch: `git push origin feature/my-feature`
+7. Submit a pull request
 
 ## License
 

@@ -961,3 +961,184 @@ cp /var/www/harelay/shared/.env "$BACKUP_DIR/$DATE/.env"
 # Keep 30 days
 find $BACKUP_DIR -maxdepth 1 -type d -mtime +30 -exec rm -rf {} \;
 ```
+
+---
+
+## Critical Operational Knowledge
+
+### Redis Configuration
+
+HARelay uses **two Redis connections** with different purposes:
+
+| Connection | Database | Prefix | Purpose |
+|------------|----------|--------|---------|
+| `default` | DB 0 | `harelay-database-` | Pub/sub for subdomain changes |
+| `cache` | DB 1 | `harelay-cache-` | Tunnel IPC (request/response) |
+
+**IMPORTANT**: The tunnel server must use `Cache::store('redis')` for IPC, not `Redis::` facade.
+
+Verify Redis is working:
+```bash
+redis-cli ping                    # Should return PONG
+redis-cli -n 1 keys '*'          # Check cache database
+redis-cli monitor                 # Watch real-time activity
+```
+
+### Nginx Cookie Header (CRITICAL)
+
+The `/api/websocket` location **MUST** include the Cookie header:
+
+```nginx
+location /api/websocket {
+    proxy_pass http://127.0.0.1:8082;
+    proxy_set_header Cookie $http_cookie;  # CRITICAL - session auth fails without this
+    # ... other headers
+}
+```
+
+Without this, WebSocket connections will fail to authenticate.
+
+### Subdomain Validation
+
+The system supports three subdomain lengths:
+- **8 characters**: Auto-generated subdomains
+- **2-32 characters**: Custom subdomains (users with `can_set_subdomain` flag)
+- **32 characters**: App subdomains (mobile app access)
+
+Nginx regex must allow 2-32 characters: `^([a-z0-9]{2,32})\.`
+
+### Session Domain Configuration
+
+`SESSION_DOMAIN` must include the dot prefix for cookies to work across subdomains:
+
+```env
+SESSION_DOMAIN=.harelay.com   # Correct - cookies work on *.harelay.com
+SESSION_DOMAIN=harelay.com    # WRONG - cookies only work on harelay.com exactly
+```
+
+### Tunnel Server Timeouts
+
+Key timeouts in the tunnel server:
+
+| Timeout | Value | Purpose |
+|---------|-------|---------|
+| Connection TTL | 120s | Mark connection disconnected if no heartbeat |
+| Request TTL | 60s | Maximum time to wait for response |
+| Stale timeout | 60s | Close add-on connection if no pong received |
+| Heartbeat interval | 30s | How often add-on sends heartbeat |
+| Traffic flush | 30s | How often traffic stats are written to database |
+
+### Static File Caching
+
+Static files are cached at the Redis level with 24-hour TTL:
+
+| Path Pattern | Cache Key |
+|--------------|-----------|
+| `/frontend_latest/*` | `tunnel:static:{subdomain}:{uri}` |
+| `/static/*` | `tunnel:static:{subdomain}:{uri}` |
+| `/hacsfiles/*` | `tunnel:static:{subdomain}:{uri}` |
+
+Cache is keyed by subdomain to prevent cross-user cache pollution.
+
+### Request Cancellation
+
+When users navigate away mid-request, cleanup is handled automatically:
+1. PHP shutdown function marks request as cancelled
+2. Request removed from pending queue
+3. Tunnel server discards cancelled requests
+
+### App Subdomain Authentication
+
+App subdomains (32 chars) bypass HARelay login but still require HA login:
+- All cookies passed through (regular subdomain filters them to avoid forwarding HARelay session cookies)
+- `Set-Cookie` domain attribute stripped for browser compatibility
+- User must check "Stay logged in" in HA for persistent auth
+
+### Ingress WebSocket Paths
+
+HA add-ons use ingress WebSocket paths: `/api/hassio_ingress/{token}/ws`
+
+These require special handling:
+1. `ingress_session` cookie must be extracted and forwarded
+2. Path is validated with regex: `^/api/hassio_ingress/[^/]+/ws$`
+3. Add-on includes cookie in WebSocket headers to HA
+
+---
+
+## Known Limitations
+
+1. **HA token persistence**: Users must check "Stay logged in" on app_subdomain - this is HA behavior, not HARelay
+2. **localStorage per-origin**: Tokens saved on regular subdomain aren't available on app_subdomain
+3. **Blocking Redis operations**: Don't work in Workerman, always use polling
+4. **Multiple Set-Cookie headers**: Require special handling in add-on (aiohttp's `dict()` loses duplicates)
+5. **IP consistency**: HA rejects auth if IP changes during login_flow - X-Forwarded-For must be consistent
+
+---
+
+## Debugging Production Issues
+
+### Connection Issues
+
+```bash
+# Check tunnel server status
+sudo systemctl status harelay-tunnel
+
+# View tunnel logs
+sudo journalctl -u harelay-tunnel -f
+
+# Enable debug mode
+# Edit /var/www/harelay/shared/.env and set TUNNEL_DEBUG=true
+sudo systemctl restart harelay-tunnel
+```
+
+### Redis Issues
+
+```bash
+# Check Redis is running
+redis-cli ping
+
+# Check cache keys
+redis-cli -n 1 keys '*tunnel*'
+
+# Monitor real-time activity
+redis-cli monitor
+```
+
+### Database Issues
+
+```bash
+# Check connection status
+cd /var/www/harelay/current
+sudo -u www-data php artisan tinker
+>>> \App\Models\HaConnection::where('status', 'connected')->count()
+
+# Check stale connections
+>>> \App\Models\HaConnection::where('status', 'connected')
+...     ->where('last_connected_at', '<', now()->subMinutes(5))->get()
+```
+
+### WebSocket Issues
+
+1. Check nginx logs: `/var/log/nginx/harelay.error.log`
+2. Verify Cookie header is forwarded in nginx config
+3. Enable `TUNNEL_DEBUG=true` and watch for WebSocket messages
+4. Check browser console for WebSocket errors
+
+### Quick Health Check
+
+```bash
+# Check all services
+sudo systemctl status harelay-tunnel harelay-queue php8.3-fpm nginx redis-server mysql
+
+# Test HTTPS
+curl -I https://harelay.com
+
+# Test subdomain
+curl -I https://test.harelay.com
+
+# Test Redis
+redis-cli ping
+
+# Check Laravel logs
+tail -f /var/www/harelay/shared/storage/logs/laravel.log
+```
