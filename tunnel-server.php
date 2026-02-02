@@ -278,10 +278,49 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
         }
         $subdomain = strtolower($matches[1]);
 
-        // Validate path - only /api/websocket triggers transparent auth
         $path = $request->path();
+
+        // =========================================================================
+        // INGRESS WEBSOCKET PATHS - separate handling, early return
+        // Only these paths use ingress_session cookie
+        // =========================================================================
+        if (preg_match('#^/api/hassio_ingress/[^/]+/ws$#', $path)) {
+            // For ingress, the ingress_session cookie IS the authentication
+            $ingressSession = $request->cookie('ingress_session');
+            if (! $ingressSession) {
+                tunnelLog("WS proxy: ingress path missing ingress_session");
+                $conn->close();
+
+                return;
+            }
+
+            // Find connection and verify tunnel is connected
+            ['tunnel_subdomain' => $tunnelSubdomain] = findConnectionBySubdomain($subdomain);
+            if (! $tunnelSubdomain || ! isset($addonConnections[$tunnelSubdomain])) {
+                tunnelLog("WS proxy: ingress - no tunnel for {$subdomain}");
+                $conn->close();
+
+                return;
+            }
+
+            $conn->subdomain = $subdomain;
+            $conn->tunnelSubdomain = $tunnelSubdomain;
+            $conn->path = $path;
+            $conn->authenticated = true;
+            $conn->streamId = bin2hex(random_bytes(16));
+            $conn->transparentAuth = true;
+            $conn->ingressSession = $ingressSession;  // ONLY set for ingress paths
+
+            tunnelLog("WS proxy: ingress {$path}");
+
+            return;  // Early return - main /api/websocket code below is not executed
+        }
+
+        // =========================================================================
+        // MAIN WEBSOCKET (/api/websocket) - original code, unchanged
+        // Note: This code does NOT touch ingress_session at all
+        // =========================================================================
         if ($path !== '/api/websocket') {
-            // Not the HA WebSocket path - let onMessage handle with explicit auth message
             return;
         }
 
@@ -369,11 +408,16 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
         $addonWsStreams[$tunnelSubdomain][$conn->streamId] = $conn->id;
 
         // Tell add-on to open WebSocket to HA
-        $addonConnections[$tunnelSubdomain]->send(json_encode([
+        $wsOpenMsg = [
             'type' => 'ws_open',
             'stream_id' => $conn->streamId,
             'path' => $conn->path,
-        ]));
+        ];
+        // Only include ingress_session for ingress paths (it's only set there)
+        if (! empty($conn->ingressSession)) {
+            $wsOpenMsg['ingress_session'] = $conn->ingressSession;
+        }
+        $addonConnections[$tunnelSubdomain]->send(json_encode($wsOpenMsg));
 
         tunnelLog("WS proxy: stream opened {$tunnelSubdomain} (stream={$conn->streamId})");
     };
