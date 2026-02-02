@@ -614,6 +614,35 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
     Timer::add(30, function () {
         flushTrafficBuffer();
     });
+
+    // ---------------------------------------------------------------------
+    // Server-side Keepalive Check (every 30 seconds)
+    // Ping all connected add-ons and close stale connections
+    // ---------------------------------------------------------------------
+    Timer::add(30, function () use (&$addonConnections) {
+        $now = time();
+        $staleTimeout = 60; // Close connections with no response for 60 seconds
+
+        foreach ($addonConnections as $subdomain => $conn) {
+            // Check if connection is stale (no pong received recently)
+            $lastPong = $conn->lastPong ?? $now;
+            $timeSinceLastPong = $now - $lastPong;
+
+            if ($timeSinceLastPong > $staleTimeout) {
+                tunnelLog("Add-on: stale connection for {$subdomain} (no response for {$timeSinceLastPong}s), closing");
+                $conn->close();
+                continue;
+            }
+
+            // Send ping to check if connection is alive
+            try {
+                $conn->send(json_encode(['type' => 'ping']));
+            } catch (\Exception $e) {
+                tunnelLog("Add-on: failed to ping {$subdomain}: {$e->getMessage()}");
+                $conn->close();
+            }
+        }
+    });
 };
 
 // =============================================================================
@@ -624,6 +653,7 @@ $tunnelWorker->onConnect = function (TcpConnection $conn) {
     tunnelLog("Add-on: new connection (id={$conn->id})", true);
     $conn->authenticated = false;
     $conn->subdomain = null;
+    $conn->lastPong = time();  // Track last response for keepalive
 };
 
 $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonConnections, &$browserWsConnections, &$addonWsStreams) {
@@ -788,14 +818,24 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
     }
 
     // -------------------------------------------------------------------------
-    // Heartbeat
+    // Heartbeat (from add-on)
     // -------------------------------------------------------------------------
     if ($type === 'heartbeat') {
+        $conn->lastPong = time();  // Add-on is alive
         if ($conn->subdomain) {
             HaConnection::where('subdomain', $conn->subdomain)
                 ->update(['last_connected_at' => now()]);
         }
         $conn->send(json_encode(['type' => 'pong']));
+
+        return;
+    }
+
+    // -------------------------------------------------------------------------
+    // Pong (response to our ping)
+    // -------------------------------------------------------------------------
+    if ($type === 'pong') {
+        $conn->lastPong = time();  // Add-on responded to our ping
 
         return;
     }
