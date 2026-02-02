@@ -278,13 +278,50 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
         }
         $subdomain = strtolower($matches[1]);
 
-        // Determine path type
         $path = $request->path();
-        $isMainWebSocket = ($path === '/api/websocket');
-        $isIngressWebSocket = preg_match('#^/api/hassio_ingress/[^/]+/ws$#', $path);
 
-        if (! $isMainWebSocket && ! $isIngressWebSocket) {
-            // Not a valid HA WebSocket path - let onMessage handle with explicit auth message
+        // =========================================================================
+        // INGRESS WEBSOCKET - handle separately, before main logic
+        // =========================================================================
+        if (preg_match('#^/api/hassio_ingress/[^/]+/ws$#', $path)) {
+            $ingressSession = $request->cookie('ingress_session');
+            if (! $ingressSession) {
+                tunnelLog("WS proxy: ingress path without ingress_session cookie");
+                $conn->close();
+
+                return;
+            }
+
+            // Find connection
+            [
+                'connection' => $connection,
+                'tunnel_subdomain' => $tunnelSubdomain,
+            ] = findConnectionBySubdomain($subdomain);
+
+            if (! $connection || ! isset($addonConnections[$tunnelSubdomain])) {
+                tunnelLog("WS proxy: ingress - tunnel not available for {$subdomain}");
+                $conn->close();
+
+                return;
+            }
+
+            $conn->subdomain = $subdomain;
+            $conn->tunnelSubdomain = $tunnelSubdomain;
+            $conn->path = $path;
+            $conn->authenticated = true;
+            $conn->streamId = bin2hex(random_bytes(16));
+            $conn->transparentAuth = true;
+            $conn->ingressSession = $ingressSession;
+
+            tunnelLog("WS proxy: ingress access {$path} for {$tunnelSubdomain}");
+
+            return;
+        }
+
+        // =========================================================================
+        // MAIN WEBSOCKET - original code unchanged below
+        // =========================================================================
+        if ($path !== '/api/websocket') {
             return;
         }
 
@@ -309,35 +346,6 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
             return;
         }
-
-        // =========================================================================
-        // INGRESS WEBSOCKET - authenticated by ingress_session cookie
-        // =========================================================================
-        if ($isIngressWebSocket) {
-            $ingressSession = $request->cookie('ingress_session');
-            if (! $ingressSession) {
-                tunnelLog("WS proxy: ingress path without ingress_session cookie");
-                $conn->close();
-
-                return;
-            }
-
-            $conn->subdomain = $subdomain;
-            $conn->tunnelSubdomain = $tunnelSubdomain;
-            $conn->path = $path;
-            $conn->authenticated = true;
-            $conn->streamId = bin2hex(random_bytes(16));
-            $conn->transparentAuth = true;
-            $conn->ingressSession = $ingressSession;
-
-            tunnelLog("WS proxy: ingress access {$path} for {$tunnelSubdomain}");
-
-            return;
-        }
-
-        // =========================================================================
-        // MAIN WEBSOCKET (/api/websocket) - authenticated by session or app_subdomain
-        // =========================================================================
 
         // App subdomain access - no authentication required (URL is the auth)
         if ($isAppSubdomain) {
