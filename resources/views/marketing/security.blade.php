@@ -27,7 +27,7 @@
             <div class="text-center">
                 <h2 class="text-2xl font-bold text-white mb-4">Our Security Promise</h2>
                 <p class="text-lg text-green-300 max-w-3xl mx-auto">
-                    <strong>HARelay cannot access your Home Assistant.</strong> We don't see your dashboards, automations, devices, or any data. We simply forward encrypted traffic between you and your home.
+                    <strong>HARelay doesn't log or store your Home Assistant traffic.</strong> We relay requests between you and your home, but we never record your dashboards, automations, device states, or credentials.
                 </p>
             </div>
         </div>
@@ -55,7 +55,7 @@
                     </p>
                 </div>
 
-                <!-- End-to-End Encryption -->
+                <!-- Encrypted Connections -->
                 <div class="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-8">
                     <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center mb-6">
                         <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,20 +64,20 @@
                     </div>
                     <h3 class="text-xl font-semibold text-white mb-3">Encrypted Connections</h3>
                     <p class="text-slate-400">
-                        All traffic is encrypted using TLS (the same encryption banks use). Your data travels securely from your device to your Home Assistant. We can't read or modify anything passing through.
+                        All connections use TLS encryption (the same encryption banks use). Your data travels securely between your device and Home Assistant. Traffic passes through our servers but is never logged or stored.
                     </p>
                 </div>
 
-                <!-- No Data Storage -->
+                <!-- No Traffic Logging -->
                 <div class="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-8">
                     <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center mb-6">
                         <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
                         </svg>
                     </div>
-                    <h3 class="text-xl font-semibold text-white mb-3">No Data Storage</h3>
+                    <h3 class="text-xl font-semibold text-white mb-3">No Traffic Logging</h3>
                     <p class="text-slate-400">
-                        We don't log, store, or analyze your Home Assistant traffic. No history of your automations, no record of your device states. Your smart home data stays in your home.
+                        We don't log or permanently store your Home Assistant traffic. Requests pass through briefly during processing, then are immediately discarded. No history, no records.
                     </p>
                 </div>
 
@@ -289,11 +289,11 @@
                         </li>
                         <li class="flex items-start">
                             <span class="text-green-400 mr-3">-</span>
-                            <span>The content of any traffic passing through</span>
+                            <span>Traffic content (passes through but is never logged)</span>
                         </li>
                         <li class="flex items-start">
                             <span class="text-green-400 mr-3">-</span>
-                            <span>Your home IP address or location</span>
+                            <span>Your home IP address (not logged or stored)</span>
                         </li>
                     </ul>
                 </div>
@@ -371,14 +371,14 @@
                 <div class="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-6">
                     <h3 class="text-lg font-semibold text-white">Can HARelay access my Home Assistant?</h3>
                     <p class="mt-3 text-slate-400">
-                        No. HARelay acts as a secure relay, forwarding encrypted traffic between your devices and your Home Assistant. We cannot decrypt, read, or modify the traffic. Think of it like a sealed envelope - we deliver it, but we can't open it.
+                        HARelay acts as a relay, forwarding traffic between your devices and your Home Assistant. While traffic passes through our servers, we don't log, store, or analyze it. We never see your HA login credentials (those go directly to your HA). We have no way to control your devices or access your automations.
                     </p>
                 </div>
 
                 <div class="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-6">
                     <h3 class="text-lg font-semibold text-white">What happens if HARelay gets hacked?</h3>
                     <p class="mt-3 text-slate-400">
-                        Even in that unlikely scenario, attackers couldn't access your Home Assistant. They would only see encrypted traffic. Your HA login credentials are never transmitted to or stored by HARelay. Additionally, your home network has no open ports, so there's no direct path in.
+                        In that unlikely scenario: We don't store traffic logs, so there's no historical data to steal. Your HA login credentials are never stored by HARelay - they go directly to your Home Assistant. Your home network has no open ports, so there's no direct path in. You can immediately disconnect by stopping the add-on.
                     </p>
                 </div>
 
