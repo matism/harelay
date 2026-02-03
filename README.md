@@ -26,9 +26,11 @@ HARelay provides a secure tunnel between your Home Assistant instance and the in
 │                 │                   │  - Laravel App (HTTP proxy)      │
 └─────────────────┘                   │  - Workerman Tunnel Server       │
         │                             │  - WebSocket Proxy               │
+        │                             │  - Redis (igbinary + LZ4)        │
         │                             └──────────────────────────────────┘
         │ visits subdomain.harelay.com           │
         │                                        │ WebSocket tunnel
+        │                                        │ (MessagePack binary)
         │                             ┌──────────────────────────────────┐
         └────────────────────────────►│      Home Assistant Add-on       │
                                       │  - Connects via WebSocket        │
@@ -55,10 +57,13 @@ The dashboard auto-refreshes when the connection status changes, showing real-ti
 
 ## Requirements
 
-- PHP 8.2+
+- PHP 8.2+ with extensions:
+  - `php-redis` (with igbinary + LZ4 support)
+  - `php-msgpack` (for binary protocol)
+  - `php-igbinary` (for Redis serialization)
 - Composer
 - Node.js 20.19+ or 22.12+ (for Vite)
-- Redis (required for tunnel IPC)
+- Redis (required for tunnel IPC, uses LZ4 compression)
 - MySQL/PostgreSQL (production) or SQLite (development)
 
 ## Quick Start
@@ -308,6 +313,8 @@ redis-cli monitor
 The HA add-on is maintained in a separate repository. See the [ha-addon](https://github.com/harelay/ha-addon) repository for installation and development instructions.
 
 ### Key Features
+- **MessagePack binary protocol** (40-60% bandwidth reduction vs JSON)
+- **No base64 encoding** - raw binary data throughout
 - Automatic reconnection with exponential backoff
 - Device code pairing mode
 - LRU cache for static files (100MB)

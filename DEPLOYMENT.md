@@ -68,7 +68,21 @@ sudo apt update
 
 sudo apt install -y php8.3 php8.3-fpm php8.3-cli php8.3-mysql php8.3-mbstring \
     php8.3-xml php8.3-bcmath php8.3-curl php8.3-zip php8.3-gd php8.3-intl \
-    php8.3-readline php8.3-pcov php8.3-sockets php8.3-redis
+    php8.3-readline php8.3-pcov php8.3-sockets php8.3-redis php8.3-igbinary php8.3-msgpack
+```
+
+**Important Extensions:**
+- `php8.3-redis`: Redis client (must be compiled with igbinary + LZ4 support)
+- `php8.3-igbinary`: Efficient binary serialization for Redis
+- `php8.3-msgpack`: MessagePack binary protocol for tunnel communication
+
+**Verify extensions are loaded:**
+```bash
+php -m | grep -E 'redis|igbinary|msgpack'
+# Should show: igbinary, msgpack, redis
+
+# Verify Redis has LZ4 support
+php -r "echo defined('Redis::COMPRESSION_LZ4') ? 'LZ4: OK' : 'LZ4: MISSING';"
 ```
 
 ### 2. Install Composer
@@ -787,8 +801,14 @@ Add:
 **5. Redis not working**
 - Check if Redis is running: `sudo systemctl status redis-server`
 - Test connection: `redis-cli ping` (should return PONG)
-- Check PHP Redis extension: `php -m | grep redis`
+- Check PHP extensions: `php -m | grep -E 'redis|igbinary|msgpack'`
+- Verify LZ4 support: `php -r "echo defined('Redis::COMPRESSION_LZ4') ? 'OK' : 'MISSING';"`
 - View Redis logs: `sudo tail -f /var/log/redis/redis-server.log`
+
+**6. MessagePack issues**
+- Verify msgpack extension: `php -m | grep msgpack`
+- Test encoding: `php -r "var_dump(msgpack_pack(['test' => 'data']));"`
+- If missing: `sudo apt install php8.3-msgpack && sudo systemctl restart php8.3-fpm`
 
 **6. Permission errors**
 ```bash
@@ -973,16 +993,29 @@ HARelay uses **two Redis connections** with different purposes:
 | Connection | Database | Prefix | Purpose |
 |------------|----------|--------|---------|
 | `default` | DB 0 | `harelay-database-` | Pub/sub for subdomain changes |
-| `cache` | DB 1 | `harelay-cache-` | Tunnel IPC (request/response) |
+| `cache` | DB 1 | `harelay:` | Tunnel IPC (request/response) |
+
+**Cache Optimization:**
+The cache connection uses igbinary serialization + LZ4 compression:
+- **igbinary**: More compact than PHP serialize, handles binary data efficiently
+- **LZ4**: Fast compression with good ratios (compression_level=3)
+- **No base64 encoding**: Response bodies stored as raw bytes
 
 **IMPORTANT**: The tunnel server must use `Cache::store('redis')` for IPC, not `Redis::` facade.
 
 Verify Redis is working:
 ```bash
 redis-cli ping                    # Should return PONG
-redis-cli -n 1 keys '*'          # Check cache database
+redis-cli -n 1 keys 'harelay:*'  # Check cache database
 redis-cli monitor                 # Watch real-time activity
+
+# Verify compression is active (test in Laravel tinker)
+php artisan tinker
+>>> Cache::store('redis')->put('test', str_repeat('x', 10000), 60);
+>>> Cache::store('redis')->get('test') === str_repeat('x', 10000);  // Should be true
 ```
+
+**Note:** When viewing Redis values with `redis-cli`, you'll see binary data (igbinary format) rather than readable text. This is expected - Laravel handles serialization/deserialization automatically.
 
 ### Nginx Cookie Header (CRITICAL)
 
