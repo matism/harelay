@@ -593,19 +593,13 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
                     trackTraffic($subdomain, $bodyBytes, 0);
                 }
 
-                // Prepare body - decode base64 from TunnelManager to raw binary for msgpack
-                $body = $request['body'] ?? null;
-                if ($body !== null && ($request['body_encoded'] ?? false)) {
-                    $body = base64_decode($body);
-                }
-
                 sendToAddon($conn, [
                     'type' => 'request',
                     'request_id' => $requestId,
                     'method' => $request['method'],
                     'uri' => $request['uri'],
                     'headers' => $request['headers'],
-                    'body' => $body,
+                    'body' => $request['body'] ?? null,
                 ]);
             }
 
@@ -810,11 +804,10 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
         $statusCode = (int) ($message['status_code'] ?? 502);
         tunnelLog("HTTP <- {$conn->subdomain}: {$statusCode}", true);
 
-        // Body arrives as raw bytes from msgpack, encode to base64 for Redis
+        // Body arrives as raw bytes from msgpack, store directly (igbinary handles it)
         $body = $message['body'] ?? '';
         if (! empty($body)) {
             trackTraffic($conn->subdomain, 0, strlen($body));
-            $body = base64_encode($body);
         }
 
         // Store response in cache - TunnelManager is polling for this
@@ -822,7 +815,6 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
             'status_code' => $statusCode,
             'headers' => $message['headers'] ?? [],
             'body' => $body,
-            'is_base64' => true,
         ], 60);
 
         return;

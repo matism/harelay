@@ -137,11 +137,6 @@ class ProxyController extends Controller
         $headers = $responseData['headers'] ?? [];
         $body = $responseData['body'] ?? '';
 
-        // Decode base64 body
-        if ($responseData['is_base64'] ?? false) {
-            $body = base64_decode($body);
-        }
-
         // Check if this is a static asset that can be cached
         $contentType = $headers['Content-Type'] ?? $headers['content-type'] ?? '';
         $isStaticAsset = $this->isStaticAsset($contentType);

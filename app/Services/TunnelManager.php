@@ -85,15 +85,14 @@ class TunnelManager
             }
         });
 
-        // Store request in pending list (base64 encode body for safe JSON transport)
+        // Store request in pending list (raw binary - igbinary handles it)
         $pendingKey = $this->getPendingCacheKey($subdomain);
         $pendingRequests = Cache::store('redis')->get($pendingKey, []);
         $pendingRequests[$requestId] = [
             'method' => $method,
             'uri' => $uri,
             'headers' => $headers,
-            'body' => $body ? base64_encode($body) : null,
-            'body_encoded' => true,
+            'body' => $body,
             'created_at' => now()->toIso8601String(),
         ];
         Cache::store('redis')->put($pendingKey, $pendingRequests, self::REQUEST_TTL);
