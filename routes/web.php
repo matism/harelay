@@ -14,6 +14,7 @@ Route::get('/privacy', [MarketingController::class, 'privacy'])->name('marketing
 Route::get('/imprint', [MarketingController::class, 'imprint'])->name('marketing.imprint');
 Route::get('/vs/nabu-casa', [MarketingController::class, 'vsNabuCasa'])->name('marketing.vs-nabu-casa');
 Route::get('/vs/homeflow', [MarketingController::class, 'vsHomeflow'])->name('marketing.vs-homeflow');
+Route::get('/security', [MarketingController::class, 'security'])->name('marketing.security');
 
 // Device linking
 Route::get('/link', [DeviceLinkController::class, 'show'])->name('device.link');

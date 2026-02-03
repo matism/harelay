@@ -120,6 +120,9 @@
                             <a href="{{ route('marketing.how-it-works') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out {{ request()->routeIs('marketing.how-it-works') ? 'border-cyan-400 text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-slate-400' }}">
                                 How It Works
                             </a>
+                            <a href="{{ route('marketing.security') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out {{ request()->routeIs('marketing.security') ? 'border-cyan-400 text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-slate-400' }}">
+                                Security
+                            </a>
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
@@ -167,6 +170,11 @@
                             <li>
                                 <a href="{{ route('marketing.how-it-works') }}" class="text-slate-400 hover:text-white text-sm transition">
                                     How It Works
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('marketing.security') }}" class="text-slate-400 hover:text-white text-sm transition">
+                                    Security
                                 </a>
                             </li>
                             <li>

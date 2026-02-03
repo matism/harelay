@@ -21,6 +21,11 @@ class MarketingController extends Controller
         return view('marketing.privacy');
     }
 
+    public function security(): View
+    {
+        return view('marketing.security');
+    }
+
     public function imprint(): View
     {
         return view('marketing.imprint');

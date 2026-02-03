@@ -1,5 +1,5 @@
 <div class="py-20">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-8 md:p-12 text-center">
             <h2 class="text-2xl sm:text-3xl font-bold text-white">
                 Ready to get started?
