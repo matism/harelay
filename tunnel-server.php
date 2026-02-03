@@ -34,11 +34,12 @@ use Workerman\Worker;
 
 /**
  * Send a message to an add-on using its negotiated protocol.
- * Protocol 1 = JSON (default), Protocol 2 = MessagePack (binary)
+ * tunnelProtocol 1 = JSON (default), tunnelProtocol 2 = MessagePack (binary)
+ * Note: We use "tunnelProtocol" to avoid conflicting with Workerman's internal "protocol" property.
  */
 function sendToAddon(TcpConnection $conn, array $message): void
 {
-    if (($conn->protocol ?? 1) === 2 && extension_loaded('msgpack')) {
+    if (($conn->tunnelProtocol ?? 1) === 2 && extension_loaded('msgpack')) {
         $conn->send(msgpack_pack($message));
     } else {
         $conn->send(json_encode($message));
@@ -603,7 +604,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
                 $bodyEncoded = $request['body_encoded'] ?? false;
 
                 // For msgpack: decode base64 from TunnelManager, send raw binary
-                if (($conn->protocol ?? 1) === 2 && $body !== null && $bodyEncoded) {
+                if (($conn->tunnelProtocol ?? 1) === 2 && $body !== null && $bodyEncoded) {
                     $body = base64_decode($body);
                     $bodyEncoded = false;
                 }
@@ -731,14 +732,14 @@ $tunnelWorker->onConnect = function (TcpConnection $conn) {
     $conn->authenticated = false;
     $conn->subdomain = null;
     $conn->lastPong = time();  // Track last response for keepalive
-    $conn->protocol = 1;       // Default to JSON protocol
-    $conn->capabilities = [];  // Add-on capabilities
+    $conn->tunnelProtocol = 1;       // Default to JSON protocol (1=JSON, 2=MessagePack)
+    $conn->tunnelCapabilities = [];  // Add-on capabilities
 };
 
 $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonConnections, &$browserWsConnections, &$addonWsStreams) {
     // Decode based on connection protocol
     // Note: Auth message is always JSON (before protocol negotiation)
-    if (($conn->protocol ?? 1) === 2 && extension_loaded('msgpack') && $conn->authenticated) {
+    if (($conn->tunnelProtocol ?? 1) === 2 && extension_loaded('msgpack') && $conn->authenticated) {
         $message = @msgpack_unpack($data);
         $message = is_array($message) ? $message : null;
     } else {
@@ -793,8 +794,8 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
             $conn->websocketType = "\x82"; // Binary frame type for WebSocket
         }
 
-        $conn->protocol = $useProtocol;
-        $conn->capabilities = $capabilities;
+        $conn->tunnelProtocol = $useProtocol;
+        $conn->tunnelCapabilities = $capabilities;
         $conn->authenticated = true;
         $conn->subdomain = $subdomain;
         $addonConnections[$subdomain] = $conn;
@@ -846,7 +847,7 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
 
         // For msgpack: body arrives as raw bytes, encode to base64 for Redis
         // (TunnelManager/ProxyController expect base64)
-        if (($conn->protocol ?? 1) === 2 && ! empty($body) && is_string($body)) {
+        if (($conn->tunnelProtocol ?? 1) === 2 && ! empty($body) && is_string($body)) {
             // Body is raw bytes from msgpack, track actual size
             $bodyBytes = strlen($body);
             trackTraffic($conn->subdomain, 0, $bodyBytes);
