@@ -358,7 +358,8 @@ server {
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-    # Security headers
+    # Security headers (required for SSL Labs A+ rating)
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
@@ -588,6 +589,8 @@ sudo systemctl status harelay-queue
 
 Configure DNS records for your domain:
 
+### Required Records
+
 | Type | Name | Value | TTL |
 |------|------|-------|-----|
 | A | @ | Your server IP | 300 |
@@ -596,6 +599,21 @@ Configure DNS records for your domain:
 | AAAA | * | Your server IPv6 (if available) | 300 |
 
 The wildcard (`*`) record is essential for subdomain routing.
+
+### CAA Records (Recommended)
+
+CAA records restrict which Certificate Authorities can issue certificates for your domain:
+
+| Type | Name | Tag | Value |
+|------|------|-----|-------|
+| CAA | @ | issue | `letsencrypt.org` |
+| CAA | @ | issuewild | `letsencrypt.org` |
+| CAA | @ | iodef | `mailto:your-email@example.com` |
+
+Verify CAA records are set:
+```bash
+dig harelay.com CAA +short
+```
 
 ---
 
@@ -638,6 +656,20 @@ Test that the Home Assistant add-on can connect to port 8081:
 ```bash
 # From another machine
 nc -zv harelay.com 8081
+```
+
+### 4. Verify SSL configuration
+
+Test your SSL configuration at SSL Labs (should be A+):
+
+```
+https://www.ssllabs.com/ssltest/analyze.html?d=harelay.com
+```
+
+Verify HSTS header is present:
+```bash
+curl -sI https://harelay.com | grep -i strict
+# Should show: Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
 ```
 
 ---

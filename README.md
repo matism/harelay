@@ -256,14 +256,16 @@ Unique index on `(ha_connection_id, date)` for efficient upserts. Updated atomic
 1. **Connection Tokens**: Tokens are hashed in the database and shown only once to users
 2. **Session Authentication**: Users must be logged in to access their subdomain
 3. **Owner Verification**: Users can only access their own connection
-4. **TLS Encryption**: All traffic encrypted in transit
-5. **No Port Exposure**: Home Assistant never exposes ports to the internet
-6. **Token Rotation**: Users can regenerate tokens if compromised
-7. **No Crawling**: Subdomain routes include `X-Robots-Tag: noindex` headers
-8. **Long Subdomains**: 8-character subdomains (36^8 combinations) prevent brute-force discovery
-9. **App Subdomain Security**: 32-character app subdomains (36^32 ≈ 6.3 × 10^49 combinations) make guessing impossible
-10. **Device Code Expiry**: Pairing codes expire after 15 minutes and are single-use
-11. **Two-Factor Authentication**: Optional 2FA for user accounts
+4. **TLS Encryption**: All traffic encrypted in transit (TLS 1.3/1.2)
+5. **SSL Labs A+ Rating**: HSTS enabled, modern cipher suites, forward secrecy
+6. **No Port Exposure**: Home Assistant never exposes ports to the internet
+7. **Token Rotation**: Users can regenerate tokens if compromised
+8. **No Crawling**: Subdomain routes include `X-Robots-Tag: noindex` headers
+9. **Long Subdomains**: 8-character subdomains (36^8 combinations) prevent brute-force discovery
+10. **App Subdomain Security**: 32-character app subdomains (36^32 ≈ 6.3 × 10^49 combinations) make guessing impossible
+11. **Device Code Expiry**: Pairing codes expire after 15 minutes and are single-use
+12. **Two-Factor Authentication**: Optional 2FA for user accounts
+13. **DNS CAA Records**: Restrict certificate issuance to Let's Encrypt only
 
 ## Troubleshooting
 
