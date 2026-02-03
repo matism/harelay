@@ -180,6 +180,8 @@ return [
             'options' => [
                 'prefix' => null,
                 'serializer' => extension_loaded('igbinary') ? Redis::SERIALIZER_IGBINARY : Redis::SERIALIZER_PHP,
+                'compression' => extension_loaded('lz4') ? Redis::COMPRESSION_LZ4 : Redis::COMPRESSION_NONE,
+                'compression_level' => 3,
             ],
         ],
 

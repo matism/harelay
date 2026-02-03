@@ -32,6 +32,19 @@ use Workerman\Redis\Client as RedisClient;
 use Workerman\Timer;
 use Workerman\Worker;
 
+/**
+ * Send a message to an add-on using its negotiated protocol.
+ * Protocol 1 = JSON (default), Protocol 2 = MessagePack (binary)
+ */
+function sendToAddon(TcpConnection $conn, array $message): void
+{
+    if (($conn->protocol ?? 1) === 2 && extension_loaded('msgpack')) {
+        $conn->send(msgpack_pack($message));
+    } else {
+        $conn->send(json_encode($message));
+    }
+}
+
 // Configuration
 $host = getenv('TUNNEL_HOST') ?: '0.0.0.0';
 $tunnelPort = (int) (getenv('TUNNEL_PORT') ?: 8081);
@@ -417,7 +430,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
         if (! empty($conn->ingressSession)) {
             $wsOpenMsg['ingress_session'] = $conn->ingressSession;
         }
-        $addonConnections[$tunnelSubdomain]->send(json_encode($wsOpenMsg));
+        sendToAddon($addonConnections[$tunnelSubdomain], $wsOpenMsg);
 
         tunnelLog("WS proxy: stream opened {$tunnelSubdomain} (stream={$conn->streamId})");
     };
@@ -490,11 +503,11 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             tunnelLog("WS proxy: authenticated {$subdomain} -> {$tunnelSubdomain} (stream={$conn->streamId}, total streams={$streamCount})", true);
 
             // Tell add-on to open WebSocket to HA
-            $addonConnections[$tunnelSubdomain]->send(json_encode([
+            sendToAddon($addonConnections[$tunnelSubdomain], [
                 'type' => 'ws_open',
                 'stream_id' => $conn->streamId,
                 'path' => $path,
-            ]));
+            ]);
 
             return;
         }
@@ -507,11 +520,11 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             // Track incoming WebSocket bytes
             trackTraffic($tunnelSubdomain, strlen($data), 0);
 
-            $addonConnections[$tunnelSubdomain]->send(json_encode([
+            sendToAddon($addonConnections[$tunnelSubdomain], [
                 'type' => 'ws_message',
                 'stream_id' => $conn->streamId,
                 'message' => $data,
-            ]));
+            ]);
         } else {
             tunnelLog("WS proxy: no addon connection for {$tunnelSubdomain}");
         }
@@ -529,10 +542,10 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
         // Tell add-on to close HA WebSocket
         if (isset($addonConnections[$tunnelSubdomain])) {
-            $addonConnections[$tunnelSubdomain]->send(json_encode([
+            sendToAddon($addonConnections[$tunnelSubdomain], [
                 'type' => 'ws_close',
                 'stream_id' => $conn->streamId,
-            ]));
+            ]);
         }
 
         // Cleanup
@@ -585,15 +598,25 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
                     trackTraffic($subdomain, $bodyBytes, 0);
                 }
 
-                $conn->send(json_encode([
+                // Prepare body for sending
+                $body = $request['body'] ?? null;
+                $bodyEncoded = $request['body_encoded'] ?? false;
+
+                // For msgpack: decode base64 from TunnelManager, send raw binary
+                if (($conn->protocol ?? 1) === 2 && $body !== null && $bodyEncoded) {
+                    $body = base64_decode($body);
+                    $bodyEncoded = false;
+                }
+
+                sendToAddon($conn, [
                     'type' => 'request',
                     'request_id' => $requestId,
                     'method' => $request['method'],
                     'uri' => $request['uri'],
                     'headers' => $request['headers'],
-                    'body' => $request['body'] ?? null,
-                    'body_encoded' => $request['body_encoded'] ?? false,
-                ]));
+                    'body' => $body,
+                    'body_encoded' => $bodyEncoded,
+                ]);
             }
 
             Cache::store('redis')->forget($pendingKey);
@@ -653,11 +676,11 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
             $addonConnections[$newSubdomain] = $conn;
 
             // Notify the add-on of the new subdomain
-            $conn->send(json_encode([
+            sendToAddon($conn, [
                 'type' => 'subdomain_changed',
                 'old_subdomain' => $oldSubdomain,
                 'new_subdomain' => $newSubdomain,
-            ]));
+            ]);
         });
     });
 
@@ -690,7 +713,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
             // Send ping to check if connection is alive
             try {
-                $conn->send(json_encode(['type' => 'ping']));
+                sendToAddon($conn, ['type' => 'ping']);
             } catch (\Exception $e) {
                 tunnelLog("Add-on: failed to ping {$subdomain}: {$e->getMessage()}");
                 $conn->close();
@@ -708,10 +731,19 @@ $tunnelWorker->onConnect = function (TcpConnection $conn) {
     $conn->authenticated = false;
     $conn->subdomain = null;
     $conn->lastPong = time();  // Track last response for keepalive
+    $conn->protocol = 1;       // Default to JSON protocol
+    $conn->capabilities = [];  // Add-on capabilities
 };
 
 $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonConnections, &$browserWsConnections, &$addonWsStreams) {
-    $message = json_decode($data, true);
+    // Decode based on connection protocol
+    // Note: Auth message is always JSON (before protocol negotiation)
+    if (($conn->protocol ?? 1) === 2 && extension_loaded('msgpack') && $conn->authenticated) {
+        $message = @msgpack_unpack($data);
+        $message = is_array($message) ? $message : null;
+    } else {
+        $message = json_decode($data, true);
+    }
 
     if (! is_array($message) || ! isset($message['type'])) {
         $conn->send(json_encode(['type' => 'error', 'error' => 'Invalid message format']));
@@ -751,14 +783,32 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
             $addonConnections[$subdomain]->close();
         }
 
+        // Protocol negotiation
+        $requestedVersion = (int) ($message['protocol_version'] ?? 1);
+        $capabilities = $message['capabilities'] ?? [];
+
+        $useProtocol = 1; // JSON default
+        if ($requestedVersion >= 2 && in_array('msgpack', $capabilities) && extension_loaded('msgpack')) {
+            $useProtocol = 2;
+            $conn->websocketType = "\x82"; // Binary frame type for WebSocket
+        }
+
+        $conn->protocol = $useProtocol;
+        $conn->capabilities = $capabilities;
         $conn->authenticated = true;
         $conn->subdomain = $subdomain;
         $addonConnections[$subdomain] = $conn;
 
         $haConn->update(['status' => 'connected', 'last_connected_at' => now()]);
 
-        tunnelLog("Add-on: authenticated {$subdomain}");
-        $conn->send(json_encode(['type' => 'auth_result', 'success' => true, 'subdomain' => $subdomain]));
+        $protocolName = $useProtocol === 2 ? 'msgpack' : 'json';
+        tunnelLog("Add-on: authenticated {$subdomain} (protocol={$protocolName})");
+        $conn->send(json_encode([
+            'type' => 'auth_result',
+            'success' => true,
+            'subdomain' => $subdomain,
+            'protocol' => $protocolName,
+        ]));
 
         return;
     }
@@ -793,8 +843,17 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
 
         // Track outgoing bytes (response body to user)
         $body = $message['body'] ?? '';
-        if (! empty($body)) {
-            // Body is base64 encoded, calculate actual size
+
+        // For msgpack: body arrives as raw bytes, encode to base64 for Redis
+        // (TunnelManager/ProxyController expect base64)
+        if (($conn->protocol ?? 1) === 2 && ! empty($body) && is_string($body)) {
+            // Body is raw bytes from msgpack, track actual size
+            $bodyBytes = strlen($body);
+            trackTraffic($conn->subdomain, 0, $bodyBytes);
+            // Encode to base64 for Redis storage
+            $body = base64_encode($body);
+        } elseif (! empty($body)) {
+            // Body is already base64 encoded from JSON protocol
             $bodyBytes = (int) (strlen($body) * 3 / 4);
             trackTraffic($conn->subdomain, 0, $bodyBytes);
         }
@@ -880,7 +939,7 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
             HaConnection::where('subdomain', $conn->subdomain)
                 ->update(['last_connected_at' => now()]);
         }
-        $conn->send(json_encode(['type' => 'pong']));
+        sendToAddon($conn, ['type' => 'pong']);
 
         return;
     }
