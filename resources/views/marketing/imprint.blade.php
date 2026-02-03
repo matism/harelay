@@ -1,35 +1,7 @@
 <x-marketing-layout>
     <x-slot name="title">Imprint - HARelay</x-slot>
     <x-slot name="description">Legal information and contact details for HARelay.</x-slot>
-
-    <x-slot name="structuredData">
-        <script type="application/ld+json">
-        {
-t            "@@context": "https://schema.org",
-            "@@type": "WebPage",
-            "name": "Imprint - HARelay",
-            "description": "Legal information and contact details for HARelay.",
-            "url": "{{ url()->current() }}",
-            "mainEntity": {
-                "@@type": "Organization",
-                "name": "HARelay",
-                "url": "https://harelay.com",
-                "email": "mathias@harelay.com",
-                "founder": {
-                    "@@type": "Person",
-                    "name": "Mathias Placho"
-                },
-                "address": {
-                    "@@type": "PostalAddress",
-                    "streetAddress": "Frauengasse 7",
-                    "addressLocality": "Graz",
-                    "postalCode": "8010",
-                    "addressCountry": "AT"
-                }
-            }
-        }
-        </script>
-    </x-slot>
+    <x-slot name="structuredData"><x-structured-data.imprint /></x-slot>
 
     <div class="py-16 sm:py-24">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">

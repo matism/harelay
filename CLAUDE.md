@@ -810,9 +810,98 @@ When debugging app_subdomain auth persistence (token not saved to localStorage):
 
 The cookie/header changes ARE still necessary for the auth flow to work, but they don't affect whether the token is persisted to localStorage. That's purely controlled by HA's frontend based on the checkbox.
 
+## SEO & Content Management
+
+### Auto-Generated SEO Files
+
+The following files are dynamically generated and always up-to-date:
+
+| File | Route | Source |
+|------|-------|--------|
+| `/sitemap.xml` | `MarketingController::sitemap()` | `getPages()` array |
+| `/llms.txt` | `MarketingController::llmsTxt()` | `getPages()` array |
+
+### Adding a New Marketing Page
+
+When adding a new marketing page, update these locations:
+
+1. **Create the view**: `resources/views/marketing/new-page.blade.php`
+2. **Create structured data**: `resources/views/components/structured-data/new-page.blade.php`
+3. **Add route**: `routes/web.php`
+4. **Add to `getPages()`**: `app/Http/Controllers/MarketingController.php`
+   ```php
+   [
+       'route' => 'marketing.new-page',
+       'priority' => '0.8',
+       'changefreq' => 'monthly',
+       'title' => 'Page Title',
+       'description' => 'Page description for SEO.',
+   ],
+   ```
+5. **Update robots.txt**: Add `Allow: /new-page` in `public/robots.txt`
+
+### Structured Data
+
+Each marketing page has its own structured data component in `resources/views/components/structured-data/`:
+
+| Page | Schema Type | File |
+|------|-------------|------|
+| security | FAQPage | `structured-data/security.blade.php` |
+| how-it-works | HowTo + FAQPage | `structured-data/how-it-works.blade.php` |
+| vs-nabu-casa | WebPage + ItemList | `structured-data/vs-nabu-casa.blade.php` |
+| vs-homeflow | WebPage + ItemList | `structured-data/vs-homeflow.blade.php` |
+| privacy | WebPage | `structured-data/privacy.blade.php` |
+| imprint | WebPage + Organization | `structured-data/imprint.blade.php` |
+
+**Important**: Use `@@context` and `@@type` (double `@`) in JSON-LD to escape Blade directive parsing.
+
+Pages include structured data via:
+```blade
+<x-slot name="structuredData"><x-structured-data.page-name /></x-slot>
+```
+
+### Updating Content
+
+When updating FAQs or feature descriptions:
+
+1. **Update the page content** in `resources/views/marketing/*.blade.php`
+2. **Update structured data** in `resources/views/components/structured-data/*.blade.php` (keep FAQ questions in sync)
+3. **Update `getPages()` description** if the page summary changed
+4. **sitemap.xml and llms.txt** auto-update (no action needed)
+
+### Files Overview
+
+```
+public/
+└── robots.txt                              # Static, references sitemap.xml and llms.txt
+
+app/Http/Controllers/
+└── MarketingController.php                 # Contains getPages(), sitemap(), llmsTxt()
+
+resources/views/
+├── marketing/                              # Page templates
+│   ├── home.blade.php
+│   ├── how-it-works.blade.php
+│   ├── security.blade.php
+│   ├── privacy.blade.php
+│   ├── imprint.blade.php
+│   ├── vs-nabu-casa.blade.php
+│   └── vs-homeflow.blade.php
+└── components/
+    ├── marketing-layout.blade.php          # Global structured data (SoftwareApplication, Organization)
+    └── structured-data/                    # Page-specific structured data
+        ├── security.blade.php
+        ├── how-it-works.blade.php
+        ├── privacy.blade.php
+        ├── imprint.blade.php
+        ├── vs-nabu-casa.blade.php
+        └── vs-homeflow.blade.php
+```
+
 ## Working Guidelines
 
 - **Always update documentation**: When adding features, commands, or changing behavior, update both `README.md` and `CLAUDE.md`
+- **Keep SEO in sync**: When adding/updating marketing pages, follow the SEO checklist above
 - **Run tests before committing**: Use `composer test` to verify changes
 - **Format code**: Run `./vendor/bin/pint` before committing
 - **Check nginx config**: When debugging WebSocket issues, verify nginx forwards required headers
