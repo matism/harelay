@@ -120,6 +120,7 @@
                         Disconnect anytime by simply stopping the add-on. Regenerate your connection token if you suspect it's compromised. Delete your account and all data is permanently removed.
                     </p>
                 </div>
+
             </div>
         </div>
     </div>
@@ -336,6 +337,12 @@
                             </svg>
                             Modern cipher suites only
                         </li>
+                        <li class="flex items-center justify-center md:justify-start">
+                            <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Servers located in Germany (GDPR)
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -405,7 +412,7 @@
     <div class="py-24">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-white">Security Questions</h2>
+                <h2 class="text-3xl font-bold text-white">Frequently Asked Questions</h2>
             </div>
 
             <div class="space-y-6">
@@ -434,6 +441,13 @@
                     <h3 class="text-lg font-semibold text-white">What if I want to disconnect immediately?</h3>
                     <p class="mt-3 text-slate-400">
                         Simply stop the HARelay add-on in Home Assistant. The tunnel closes instantly and no one can access your HA through HARelay until you start it again. You can also regenerate your connection token to invalidate any existing credentials.
+                    </p>
+                </div>
+
+                <div class="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-6">
+                    <h3 class="text-lg font-semibold text-white">Where are your servers located?</h3>
+                    <p class="mt-3 text-slate-400">
+                        All our servers are located in Germany and subject to strict EU data protection laws (GDPR). Your data never leaves the European Union, ensuring the highest standards of privacy protection.
                     </p>
                 </div>
             </div>
