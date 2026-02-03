@@ -131,13 +131,38 @@
                                 Dashboard
                             </a>
                         @else
-                            <a href="{{ route('login') }}" class="text-sm font-medium text-slate-300 hover:text-white transition">
+                            <a href="{{ route('login') }}" class="hidden sm:inline-flex text-sm font-medium text-slate-300 hover:text-white transition">
                                 Sign in
                             </a>
                             <a href="{{ route('register') }}" class="inline-flex items-center px-4 py-2 bg-cyan-500 hover:bg-cyan-400 border border-transparent rounded-lg font-semibold text-sm text-slate-900 transition">
                                 Get Started
                             </a>
                         @endauth
+
+                        <!-- Mobile menu button -->
+                        <button type="button" class="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
+                            <span class="sr-only">Open main menu</span>
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mobile menu -->
+                <div class="hidden sm:hidden" id="mobile-menu">
+                    <div class="space-y-1 pb-3 pt-2 border-t border-white/10">
+                        <a href="{{ route('marketing.how-it-works') }}" class="block px-3 py-2 text-base font-medium {{ request()->routeIs('marketing.how-it-works') ? 'text-cyan-400' : 'text-slate-300 hover:text-white' }}">
+                            How It Works
+                        </a>
+                        <a href="{{ route('marketing.security') }}" class="block px-3 py-2 text-base font-medium {{ request()->routeIs('marketing.security') ? 'text-cyan-400' : 'text-slate-300 hover:text-white' }}">
+                            Security
+                        </a>
+                        @guest
+                            <a href="{{ route('login') }}" class="block px-3 py-2 text-base font-medium text-slate-300 hover:text-white">
+                                Sign in
+                            </a>
+                        @endguest
                     </div>
                 </div>
             </div>
