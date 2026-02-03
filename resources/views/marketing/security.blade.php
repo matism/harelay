@@ -301,8 +301,49 @@
         </div>
     </div>
 
-    <!-- Additional Security Features -->
+    <!-- SSL/TLS Configuration -->
     <div class="py-24 bg-white/5">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
+                <!-- A+ Rating Badge -->
+                <a href="https://www.ssllabs.com/ssltest/analyze.html?d=harelay.com" target="_blank" rel="noopener noreferrer" class="group flex-shrink-0">
+                    <div class="bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-lg rounded-2xl border border-green-500/30 p-8 text-center hover:border-green-400/50 transition">
+                        <div class="text-6xl font-bold text-green-400 mb-2">A+</div>
+                        <div class="text-white font-semibold">SSL Labs Rating</div>
+                        <div class="text-slate-400 text-sm mt-1 group-hover:text-cyan-400 transition">Click to verify →</div>
+                    </div>
+                </a>
+
+                <!-- Key Points -->
+                <div class="text-center md:text-left">
+                    <h2 class="text-2xl font-bold text-white mb-4">Enterprise-Grade Encryption</h2>
+                    <ul class="space-y-2 text-slate-300">
+                        <li class="flex items-center justify-center md:justify-start">
+                            <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            TLS 1.3 with forward secrecy
+                        </li>
+                        <li class="flex items-center justify-center md:justify-start">
+                            <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            HSTS enforced
+                        </li>
+                        <li class="flex items-center justify-center md:justify-start">
+                            <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Modern cipher suites only
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Security Features -->
+    <div class="py-24">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
                 <h2 class="text-3xl font-bold text-white">Additional Protections</h2>
