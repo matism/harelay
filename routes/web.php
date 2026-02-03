@@ -16,6 +16,10 @@ Route::get('/vs/nabu-casa', [MarketingController::class, 'vsNabuCasa'])->name('m
 Route::get('/vs/homeflow', [MarketingController::class, 'vsHomeflow'])->name('marketing.vs-homeflow');
 Route::get('/security', [MarketingController::class, 'security'])->name('marketing.security');
 
+// SEO routes (dynamically generated)
+Route::get('/sitemap.xml', [MarketingController::class, 'sitemap'])->name('sitemap');
+Route::get('/llms.txt', [MarketingController::class, 'llmsTxt'])->name('llms-txt');
+
 // Device linking
 Route::get('/link', [DeviceLinkController::class, 'show'])->name('device.link');
 Route::post('/link', [DeviceLinkController::class, 'link'])

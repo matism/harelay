@@ -4,8 +4,11 @@
 User-agent: *
 Allow: /
 Allow: /how-it-works
+Allow: /security
 Allow: /privacy
 Allow: /imprint
+Allow: /vs/nabu-casa
+Allow: /vs/homeflow
 
 # Protected areas
 Disallow: /api/
