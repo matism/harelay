@@ -2,6 +2,28 @@
     <x-slot name="title">Privacy Policy - HARelay</x-slot>
     <x-slot name="description">Learn how HARelay handles your data and protects your privacy.</x-slot>
 
+    <x-slot name="structuredData">
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": "Privacy Policy - HARelay",
+            "description": "Learn how HARelay handles your data and protects your privacy.",
+            "url": "{{ url()->current() }}",
+            "inLanguage": "en",
+            "isPartOf": {
+                "@type": "WebSite",
+                "name": "HARelay",
+                "url": "https://harelay.com"
+            },
+            "about": {
+                "@type": "Thing",
+                "name": "Privacy Policy"
+            }
+        }
+        </script>
+    </x-slot>
+
     <div class="py-16 sm:py-24">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 class="text-4xl font-bold text-white mb-8">Privacy Policy</h1>

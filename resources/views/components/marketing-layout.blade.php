@@ -103,6 +103,9 @@
         }
         </script>
         @endif
+
+        {{-- Page-specific structured data --}}
+        {{ $structuredData ?? '' }}
     </head>
     <body class="font-sans antialiased bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 min-h-screen">
         <!-- Navigation -->
