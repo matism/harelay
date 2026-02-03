@@ -33,17 +33,11 @@ use Workerman\Timer;
 use Workerman\Worker;
 
 /**
- * Send a message to an add-on using its negotiated protocol.
- * tunnelProtocol 1 = JSON (default), tunnelProtocol 2 = MessagePack (binary)
- * Note: We use "tunnelProtocol" to avoid conflicting with Workerman's internal "protocol" property.
+ * Send a message to an add-on using MessagePack binary protocol.
  */
 function sendToAddon(TcpConnection $conn, array $message): void
 {
-    if (($conn->tunnelProtocol ?? 1) === 2 && extension_loaded('msgpack')) {
-        $conn->send(msgpack_pack($message));
-    } else {
-        $conn->send(json_encode($message));
-    }
+    $conn->send(msgpack_pack($message));
 }
 
 // Configuration
@@ -599,14 +593,10 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
                     trackTraffic($subdomain, $bodyBytes, 0);
                 }
 
-                // Prepare body for sending
+                // Prepare body - decode base64 from TunnelManager to raw binary for msgpack
                 $body = $request['body'] ?? null;
-                $bodyEncoded = $request['body_encoded'] ?? false;
-
-                // For msgpack: decode base64 from TunnelManager, send raw binary
-                if (($conn->tunnelProtocol ?? 1) === 2 && $body !== null && $bodyEncoded) {
+                if ($body !== null && ($request['body_encoded'] ?? false)) {
                     $body = base64_decode($body);
-                    $bodyEncoded = false;
                 }
 
                 sendToAddon($conn, [
@@ -616,7 +606,6 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
                     'uri' => $request['uri'],
                     'headers' => $request['headers'],
                     'body' => $body,
-                    'body_encoded' => $bodyEncoded,
                 ]);
             }
 
@@ -732,22 +721,15 @@ $tunnelWorker->onConnect = function (TcpConnection $conn) {
     $conn->authenticated = false;
     $conn->subdomain = null;
     $conn->lastPong = time();  // Track last response for keepalive
-    $conn->tunnelProtocol = 1;       // Default to JSON protocol (1=JSON, 2=MessagePack)
-    $conn->tunnelCapabilities = [];  // Add-on capabilities
+    $conn->websocketType = "\x82"; // Binary frame type for MessagePack
 };
 
 $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonConnections, &$browserWsConnections, &$addonWsStreams) {
-    // Decode based on connection protocol
-    // Note: Auth message is always JSON (before protocol negotiation)
-    if (($conn->tunnelProtocol ?? 1) === 2 && extension_loaded('msgpack') && $conn->authenticated) {
-        $message = @msgpack_unpack($data);
-        $message = is_array($message) ? $message : null;
-    } else {
-        $message = json_decode($data, true);
-    }
+    // Decode MessagePack binary message
+    $message = @msgpack_unpack($data);
 
     if (! is_array($message) || ! isset($message['type'])) {
-        $conn->send(json_encode(['type' => 'error', 'error' => 'Invalid message format']));
+        $conn->send(msgpack_pack(['type' => 'error', 'error' => 'Invalid message format']));
 
         return;
     }
@@ -784,32 +766,18 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
             $addonConnections[$subdomain]->close();
         }
 
-        // Protocol negotiation
-        $requestedVersion = (int) ($message['protocol_version'] ?? 1);
-        $capabilities = $message['capabilities'] ?? [];
-
-        $useProtocol = 1; // JSON default
-        if ($requestedVersion >= 2 && in_array('msgpack', $capabilities) && extension_loaded('msgpack')) {
-            $useProtocol = 2;
-            $conn->websocketType = "\x82"; // Binary frame type for WebSocket
-        }
-
-        $conn->tunnelProtocol = $useProtocol;
-        $conn->tunnelCapabilities = $capabilities;
         $conn->authenticated = true;
         $conn->subdomain = $subdomain;
         $addonConnections[$subdomain] = $conn;
 
         $haConn->update(['status' => 'connected', 'last_connected_at' => now()]);
 
-        $protocolName = $useProtocol === 2 ? 'msgpack' : 'json';
-        tunnelLog("Add-on: authenticated {$subdomain} (protocol={$protocolName})");
-        $conn->send(json_encode([
+        tunnelLog("Add-on: authenticated {$subdomain}");
+        sendToAddon($conn, [
             'type' => 'auth_result',
             'success' => true,
             'subdomain' => $subdomain,
-            'protocol' => $protocolName,
-        ]));
+        ]);
 
         return;
     }
@@ -842,21 +810,11 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
         $statusCode = (int) ($message['status_code'] ?? 502);
         tunnelLog("HTTP <- {$conn->subdomain}: {$statusCode}", true);
 
-        // Track outgoing bytes (response body to user)
+        // Body arrives as raw bytes from msgpack, encode to base64 for Redis
         $body = $message['body'] ?? '';
-
-        // For msgpack: body arrives as raw bytes, encode to base64 for Redis
-        // (TunnelManager/ProxyController expect base64)
-        if (($conn->tunnelProtocol ?? 1) === 2 && ! empty($body) && is_string($body)) {
-            // Body is raw bytes from msgpack, track actual size
-            $bodyBytes = strlen($body);
-            trackTraffic($conn->subdomain, 0, $bodyBytes);
-            // Encode to base64 for Redis storage
+        if (! empty($body)) {
+            trackTraffic($conn->subdomain, 0, strlen($body));
             $body = base64_encode($body);
-        } elseif (! empty($body)) {
-            // Body is already base64 encoded from JSON protocol
-            $bodyBytes = (int) (strlen($body) * 3 / 4);
-            trackTraffic($conn->subdomain, 0, $bodyBytes);
         }
 
         // Store response in cache - TunnelManager is polling for this
