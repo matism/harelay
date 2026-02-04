@@ -160,9 +160,9 @@ class TunnelManager
     private function addPendingRequest(string $subdomain, string $requestId, array $data): void
     {
         $hashKey = $this->getPendingHashKey($subdomain);
-        // Serialize the request data for storage in hash field
-        $serialized = serialize($data);
-        Redis::connection('cache')->hset($hashKey, $requestId, $serialized);
+        // Use JSON encoding (safer than PHP serialize - prevents object injection attacks)
+        $encoded = json_encode($data, JSON_THROW_ON_ERROR);
+        Redis::connection('cache')->hset($hashKey, $requestId, $encoded);
         // Set TTL on the hash (refreshes with each new request)
         Redis::connection('cache')->expire($hashKey, self::REQUEST_TTL);
     }
@@ -189,8 +189,11 @@ class TunnelManager
         }
 
         $requests = [];
-        foreach ($raw as $requestId => $serialized) {
-            $requests[$requestId] = unserialize($serialized);
+        foreach ($raw as $requestId => $encoded) {
+            $decoded = json_decode($encoded, true);
+            if ($decoded !== null) {
+                $requests[$requestId] = $decoded;
+            }
         }
 
         return $requests;

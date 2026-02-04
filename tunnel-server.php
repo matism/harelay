@@ -573,12 +573,13 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
 
             $processedIds = [];
 
-            foreach ($rawRequests as $requestId => $serialized) {
-                // Deserialize the request data
-                $request = unserialize($serialized);
-                if ($request === false) {
-                    tunnelLog("HTTP -> {$subdomain}: Failed to deserialize request {$requestId}");
+            foreach ($rawRequests as $requestId => $encoded) {
+                // Decode the JSON request data (safer than unserialize)
+                $request = json_decode($encoded, true);
+                if ($request === null) {
+                    tunnelLog("HTTP -> {$subdomain}: Failed to decode request {$requestId}");
                     $processedIds[] = $requestId;
+
                     continue;
                 }
 
@@ -588,6 +589,7 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
                     tunnelLog("HTTP -> {$subdomain}: CANCELLED {$request['method']} {$request['uri']}", true);
                     Cache::store('redis')->forget($cancelledKey);
                     $processedIds[] = $requestId;
+
                     continue;
                 }
 

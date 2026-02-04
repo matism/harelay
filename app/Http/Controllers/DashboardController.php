@@ -9,7 +9,8 @@ class DashboardController extends Controller
 {
     public function index(Request $request): View
     {
-        $user = $request->user();
+        // Eager load relations to avoid N+1 queries
+        $user = $request->user()->load(['haConnection', 'subscription']);
 
         return view('dashboard.index', [
             'connection' => $user->haConnection,
@@ -19,22 +20,28 @@ class DashboardController extends Controller
 
     public function setup(Request $request): View
     {
+        $user = $request->user()->load('haConnection');
+
         return view('dashboard.setup', [
-            'connection' => $request->user()->haConnection,
+            'connection' => $user->haConnection,
         ]);
     }
 
     public function settings(Request $request): View
     {
+        $user = $request->user()->load('haConnection');
+
         return view('dashboard.settings', [
-            'connection' => $request->user()->haConnection,
+            'connection' => $user->haConnection,
         ]);
     }
 
     public function subscription(Request $request): View
     {
+        $user = $request->user()->load('subscription');
+
         return view('dashboard.subscription', [
-            'subscription' => $request->user()->subscription,
+            'subscription' => $user->subscription,
         ]);
     }
 }

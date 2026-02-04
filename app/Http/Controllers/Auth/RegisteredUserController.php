@@ -46,7 +46,10 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         // Notify admin of new registration
-        Mail::to('mathias@harelay.com')->queue(new NewRegistrationNotification($user));
+        $adminEmail = config('app.admin_email');
+        if ($adminEmail) {
+            Mail::to($adminEmail)->queue(new NewRegistrationNotification($user));
+        }
 
         Auth::login($user);
 
