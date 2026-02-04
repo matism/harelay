@@ -141,6 +141,23 @@ class ProxyController extends Controller
         $contentType = $headers['Content-Type'] ?? $headers['content-type'] ?? '';
         $isStaticAsset = $this->isStaticAsset($contentType);
 
+        // Debug logging for JavaScript responses to diagnose module loading failures
+        if (str_contains($contentType, 'javascript')) {
+            $contentEncoding = $headers['Content-Encoding'] ?? $headers['content-encoding'] ?? 'none';
+            $contentLength = $headers['Content-Length'] ?? $headers['content-length'] ?? 'none';
+            $isGzip = strlen($body) >= 2 && ord($body[0]) === 0x1f && ord($body[1]) === 0x8b;
+
+            \Log::info('JS Response Debug', [
+                'uri' => request()->getRequestUri(),
+                'status' => $statusCode,
+                'content_encoding' => $contentEncoding,
+                'content_length_header' => $contentLength,
+                'body_length' => strlen($body),
+                'is_gzip_body' => $isGzip,
+                'body_preview' => $isGzip ? '[gzip data]' : substr($body, 0, 100),
+            ]);
+        }
+
         // Base headers to always skip
         $skipHeaders = [
             'transfer-encoding',
