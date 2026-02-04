@@ -27,6 +27,7 @@ use App\Models\HaConnection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Redis;
 use Workerman\Connection\TcpConnection;
 use Workerman\Redis\Client as RedisClient;
 use Workerman\Timer;
@@ -561,20 +562,32 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
         }
 
         foreach ($addonConnections as $subdomain => $conn) {
-            $pendingKey = "tunnel:pending:{$subdomain}";
-            $requests = Cache::store('redis')->get($pendingKey, []);
+            // Use Redis Hash for atomic operations (prevents race conditions)
+            $hashKey = "harelay:tunnel:pending:{$subdomain}";
+            $redis = Redis::connection('cache');
+            $rawRequests = $redis->hgetall($hashKey);
 
-            if (empty($requests)) {
+            if (empty($rawRequests)) {
                 continue;
             }
 
-            foreach ($requests as $requestId => $request) {
+            $processedIds = [];
+
+            foreach ($rawRequests as $requestId => $serialized) {
+                // Deserialize the request data
+                $request = unserialize($serialized);
+                if ($request === false) {
+                    tunnelLog("HTTP -> {$subdomain}: Failed to deserialize request {$requestId}");
+                    $processedIds[] = $requestId;
+                    continue;
+                }
+
                 // Check if request was cancelled by client disconnect
                 $cancelledKey = "tunnel:cancelled:{$requestId}";
                 if (Cache::store('redis')->get($cancelledKey)) {
                     tunnelLog("HTTP -> {$subdomain}: CANCELLED {$request['method']} {$request['uri']}", true);
                     Cache::store('redis')->forget($cancelledKey);
-
+                    $processedIds[] = $requestId;
                     continue;
                 }
 
@@ -601,9 +614,14 @@ $tunnelWorker->onWorkerStart = function () use (&$addonConnections, &$browserWsC
                     'headers' => $request['headers'],
                     'body' => $request['body'] ?? null,
                 ]);
+
+                $processedIds[] = $requestId;
             }
 
-            Cache::store('redis')->forget($pendingKey);
+            // Remove processed requests atomically using HDEL
+            if (! empty($processedIds)) {
+                $redis->hdel($hashKey, ...$processedIds);
+            }
         }
     });
 

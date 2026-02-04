@@ -503,9 +503,11 @@ sudo journalctl -u harelay-tunnel -f
 ## Common Pitfalls (READ BEFORE MAKING CHANGES)
 
 ### Redis in Workerman
-- **Never use `Redis::` facade for IPC** - it uses different DB/prefix than `Cache::store('redis')`
+- **Pending requests use Redis Hash** - `TunnelManager` uses atomic HSET/HDEL/HGETALL operations to prevent race conditions when multiple requests arrive simultaneously
+- **Hash key format** - `harelay:tunnel:pending:{subdomain}` with each request as a field (request ID → serialized data)
 - **Pub/sub channels need the prefix** - Laravel's `Redis::publish()` adds `harelay-database-` prefix, so Workerman's RedisClient must subscribe to the prefixed channel name
 - **Don't use BLPOP/blocking operations** - Laravel's Redis facade doesn't handle these reliably in Workerman's long-running process
+- **Response storage still uses Cache** - Only pending requests use Redis Hash; responses use `Cache::store('redis')` with igbinary serialization
 
 ### Subdomain Validation
 - **Custom subdomains can be 2+ characters** - don't hardcode 8-character minimum in regex patterns
@@ -544,20 +546,23 @@ HA add-ons (like code-server, Terminal) use ingress WebSockets at `/api/hassio_i
 
 ## Performance & Caching
 
-### Known Issue: aiohttp Connection Pooling Corruption
+### aiohttp Configuration (CRITICAL)
 
-The add-on uses aiohttp for HTTP requests to Home Assistant. **Connection pooling causes response corruption** (NS_ERROR_CORRUPTED_CONTENT, wrong MIME types) under high concurrency.
+The add-on uses aiohttp for HTTP requests to Home Assistant. Two critical settings:
 
-**Root cause:** When many concurrent requests share pooled connections, responses can get mixed up - a JS file request receives an HTML response, etc.
-
-**Current solution:** Per-request sessions with shared connector:
+**1. `auto_decompress=False` (REQUIRED)**
 ```python
-async with aiohttp.ClientSession(connector=self.http_connector, connector_owner=False) as session:
+async with aiohttp.ClientSession(connector=self.http_connector, connector_owner=False, auto_decompress=False) as session:
+```
+Without this, aiohttp decompresses gzip responses but keeps the `Content-Encoding: gzip` header, causing browsers to try to decompress already-decompressed data (garbled JS files).
+
+**2. Per-request sessions with shared connector**
+```python
+async with aiohttp.ClientSession(connector=self.http_connector, connector_owner=False, auto_decompress=False) as session:
     async with session.request(...) as resp:
         ...
 ```
-
-This isolates session state per request while still sharing the connection pool. If corruption persists, fall back to `force_close=True` on the connector (disables connection reuse entirely).
+This isolates session state per request while still sharing the connection pool. Prevents response corruption under high concurrency.
 
 **Do NOT try:**
 - Shared session across all requests (causes corruption)
@@ -787,6 +792,27 @@ If subdomain change doesn't propagate:
 #### Redis Key Prefix Duplication
 - **Issue:** Cache keys had double prefix (`harelay-database-harelay-cache-`)
 - **Fix:** Set empty prefix at Redis connection level, single prefix `harelay:` in cache.php
+
+#### Concurrent Requests Race Condition (JS Module Loading Failures)
+- **Issue:** When browser loaded HA frontend, many parallel JS requests were made. The pending request storage used non-atomic get-modify-put pattern:
+  ```php
+  $pending = Cache::get($key, []);  // Request A and B both get {}
+  $pending[$id] = $request;          // A adds itself, B adds itself
+  Cache::put($key, $pending);        // B overwrites A - request A is lost!
+  ```
+  This caused intermittent "Loading failed for the module" errors because requests were silently dropped.
+- **Fix:** Changed to atomic Redis Hash operations:
+  - `HSET` to add requests (atomic, no overwrite)
+  - `HDEL` to remove processed requests (atomic)
+  - `HGETALL` to retrieve all pending requests
+  - Hash key: `harelay:tunnel:pending:{subdomain}`
+- **Related fix:** Also needed `auto_decompress=False` in add-on's aiohttp to preserve Content-Encoding header/body consistency
+
+#### Content-Encoding Header Mismatch
+- **Issue:** aiohttp auto-decompresses gzip responses by default, but keeps the `Content-Encoding: gzip` header. Browser received decompressed data but tried to decompress it again, causing garbled JS files.
+- **Fix:**
+  1. Add-on: Set `auto_decompress=False` on aiohttp ClientSession
+  2. Server: Preserve `Content-Encoding` header (don't strip it in ProxyController)
 
 ## Known Limitations
 

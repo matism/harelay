@@ -4,13 +4,14 @@ namespace App\Services;
 
 use App\Models\HaConnection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 
 /**
  * Manages tunnel connections and proxied requests.
  *
- * Uses Redis cache for communication with the tunnel server process
- * for fast, reliable IPC between web requests and the tunnel server.
+ * Uses Redis for communication with the tunnel server process.
+ * Pending requests use Redis Hash for atomic operations to prevent race conditions.
  */
 class TunnelManager
 {
@@ -24,7 +25,7 @@ class TunnelManager
 
     private const STATIC_CACHE_TTL = 86400; // 24 hours for static files
 
-    private const STATIC_CACHE_PATHS = ['/frontend_latest/', '/static/', '/hacsfiles/'];
+    private const STATIC_CACHE_PATHS = ['/frontend_latest/', '/static/', '/hacsfiles/', '/api/hassio/app/'];
 
     /**
      * Check if a tunnel connection is active.
@@ -85,17 +86,14 @@ class TunnelManager
             }
         });
 
-        // Store request in pending list (raw binary - igbinary handles it)
-        $pendingKey = $this->getPendingCacheKey($subdomain);
-        $pendingRequests = Cache::store('redis')->get($pendingKey, []);
-        $pendingRequests[$requestId] = [
+        // Store request atomically using Redis HSET (prevents race conditions)
+        $this->addPendingRequest($subdomain, $requestId, [
             'method' => $method,
             'uri' => $uri,
             'headers' => $headers,
             'body' => $body,
             'created_at' => now()->toIso8601String(),
-        ];
-        Cache::store('redis')->put($pendingKey, $pendingRequests, self::REQUEST_TTL);
+        ]);
 
         // Wait for response with fast polling
         $responseKey = $this->getResponseCacheKey($requestId);
@@ -157,24 +155,45 @@ class TunnelManager
     }
 
     /**
-     * Get pending requests for a subdomain.
+     * Add a pending request atomically using Redis HSET.
+     */
+    private function addPendingRequest(string $subdomain, string $requestId, array $data): void
+    {
+        $hashKey = $this->getPendingHashKey($subdomain);
+        // Serialize the request data for storage in hash field
+        $serialized = serialize($data);
+        Redis::connection('cache')->hset($hashKey, $requestId, $serialized);
+        // Set TTL on the hash (refreshes with each new request)
+        Redis::connection('cache')->expire($hashKey, self::REQUEST_TTL);
+    }
+
+    /**
+     * Remove a pending request atomically using Redis HDEL.
+     */
+    private function removePendingRequest(string $subdomain, string $requestId): void
+    {
+        $hashKey = $this->getPendingHashKey($subdomain);
+        Redis::connection('cache')->hdel($hashKey, $requestId);
+    }
+
+    /**
+     * Get all pending requests for a subdomain.
      */
     public function getPendingRequests(string $subdomain): array
     {
-        return Cache::store('redis')->get($this->getPendingCacheKey($subdomain), []);
-    }
+        $hashKey = $this->getPendingHashKey($subdomain);
+        $raw = Redis::connection('cache')->hgetall($hashKey);
 
-    private function removePendingRequest(string $subdomain, string $requestId): void
-    {
-        $pendingKey = $this->getPendingCacheKey($subdomain);
-        $pendingRequests = Cache::store('redis')->get($pendingKey, []);
-        unset($pendingRequests[$requestId]);
-
-        if (empty($pendingRequests)) {
-            Cache::store('redis')->forget($pendingKey);
-        } else {
-            Cache::store('redis')->put($pendingKey, $pendingRequests, self::REQUEST_TTL);
+        if (empty($raw)) {
+            return [];
         }
+
+        $requests = [];
+        foreach ($raw as $requestId => $serialized) {
+            $requests[$requestId] = unserialize($serialized);
+        }
+
+        return $requests;
     }
 
     /**
@@ -189,9 +208,10 @@ class TunnelManager
         );
     }
 
-    private function getPendingCacheKey(string $subdomain): string
+    private function getPendingHashKey(string $subdomain): string
     {
-        return self::CACHE_PREFIX.'pending:'.$subdomain;
+        // Use 'harelay:' prefix to match the cache store prefix
+        return 'harelay:'.self::CACHE_PREFIX.'pending:'.$subdomain;
     }
 
     private function getResponseCacheKey(string $requestId): string
