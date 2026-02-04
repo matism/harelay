@@ -142,13 +142,14 @@ class ProxyController extends Controller
         $isStaticAsset = $this->isStaticAsset($contentType);
 
         // Base headers to always skip
+        // Note: We preserve Content-Encoding so browser knows how to decode the response.
+        // The add-on must use auto_decompress=False to keep body compressed.
         $skipHeaders = [
             'transfer-encoding',
             'connection',
             'keep-alive',
-            'content-encoding',
-            'content-length',
-            'set-cookie',  // Always handle Set-Cookie separately
+            'content-length',  // Let PHP recalculate based on actual body
+            'set-cookie',      // Handle Set-Cookie separately below
         ];
 
         // For non-static assets, also skip cache headers (security)
