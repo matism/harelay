@@ -141,6 +141,19 @@ class ProxyController extends Controller
         $contentType = $headers['Content-Type'] ?? $headers['content-type'] ?? '';
         $isStaticAsset = $this->isStaticAsset($contentType);
 
+        // Debug logging for JS responses
+        if (str_contains($contentType, 'javascript')) {
+            $contentEncoding = $headers['Content-Encoding'] ?? $headers['content-encoding'] ?? 'NONE';
+            $isGzip = strlen($body) >= 2 && ord($body[0]) === 0x1f && ord($body[1]) === 0x8b;
+            \Log::info('JS Debug', [
+                'uri' => request()->getRequestUri(),
+                'content_encoding_header' => $contentEncoding,
+                'body_is_gzip' => $isGzip,
+                'body_len' => strlen($body),
+                'all_headers' => array_keys($headers),
+            ]);
+        }
+
         // Base headers to always skip
         // Note: We preserve Content-Encoding so browser knows how to decode the response.
         // The add-on must use auto_decompress=False to keep body compressed.
