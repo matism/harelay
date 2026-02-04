@@ -88,5 +88,4 @@ class SubdomainProxy
         // Set user resolver so $request->user() works
         $request->setUserResolver(fn () => Auth::user());
     }
-
 }
