@@ -68,6 +68,18 @@ class TunnelManager
             $staticCacheKey = $this->getStaticCacheKey($subdomain, $uri);
             $cached = Cache::store('redis')->get($staticCacheKey);
             if ($cached !== null) {
+                // Debug: log cache hits for JS files
+                $cachedContentType = $cached['headers']['Content-Type'] ?? $cached['headers']['content-type'] ?? '';
+                if (str_contains($cachedContentType, 'javascript')) {
+                    $cachedBody = $cached['body'] ?? '';
+                    $isGzip = strlen($cachedBody) >= 2 && ord($cachedBody[0]) === 0x1f && ord($cachedBody[1]) === 0x8b;
+                    \Log::info('JS Cache Hit', [
+                        'uri' => $uri,
+                        'content_encoding' => $cached['headers']['Content-Encoding'] ?? $cached['headers']['content-encoding'] ?? 'NONE',
+                        'body_is_gzip' => $isGzip,
+                        'body_len' => strlen($cachedBody),
+                    ]);
+                }
                 return $cached;
             }
         }
