@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Http\Controllers\ProxyController;
 use Closure;
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,7 +20,8 @@ class SubdomainProxy
 {
     public function __construct(
         private ProxyController $proxyController,
-        private ProxySecurityHeaders $securityHeaders
+        private ProxySecurityHeaders $securityHeaders,
+        private RateLimiter $limiter
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -38,6 +40,17 @@ class SubdomainProxy
         }
 
         $subdomain = strtolower($matches[1]);
+
+        // Rate limit per subdomain: 300 requests/minute (generous for HA's heavy frontend, blocks scripted abuse)
+        $key = 'proxy:'.$subdomain;
+        if ($this->limiter->tooManyAttempts($key, 300)) {
+            $retryAfter = $this->limiter->availableIn($key);
+
+            return response('Too Many Requests', 429, [
+                'Retry-After' => $retryAfter,
+            ]);
+        }
+        $this->limiter->hit($key, 60);
 
         // Initialize session manually (needed because we're intercepting before normal middleware)
         if (! $request->hasSession()) {
