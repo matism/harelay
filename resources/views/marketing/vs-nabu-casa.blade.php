@@ -251,7 +251,7 @@
                         </svg>
                     </summary>
                     <div class="px-6 pb-5">
-                        <p class="text-slate-400">Yes, you can use HARelay alongside or instead of Nabu Casa for remote access. Simply install our add-on and pair your device. Note that Google/Alexa integrations will still require Nabu Casa.</p>
+                        <p class="text-slate-400">Yes, you can use HARelay alongside or instead of Nabu Casa for remote access. Simply install our app (formerly add-on) and pair your device. Note that Google/Alexa integrations will still require Nabu Casa.</p>
                     </div>
                 </details>
 

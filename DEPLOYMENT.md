@@ -947,22 +947,22 @@ The tunnel server (Workerman) can handle thousands of concurrent connections on 
    - Run multiple tunnel server instances
    - Use Redis for shared state between instances
 
-### Add-on Repository
+### App Repository
 
-Publish your add-on repository:
+Publish your app repository:
 
-1. Create a GitHub repository at `github.com/harelay/ha-addon`
+1. Create a GitHub repository at `github.com/harelay/ha-app`
 2. Include `repository.json` at the root:
 
 ```json
 {
-  "name": "HARelay Add-ons",
-  "url": "https://github.com/harelay/ha-addon",
+  "name": "HARelay Apps",
+  "url": "https://github.com/harelay/ha-app",
   "maintainer": "HARelay <support@harelay.com>"
 }
 ```
 
-3. Include your add-on in a subdirectory (e.g., `harelay/`)
+3. Include your app in a subdirectory (e.g., `harelay/`)
 
 ### Rate Limiting
 

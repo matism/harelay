@@ -16,14 +16,14 @@
         {
             "@@type": "HowToStep",
             "position": 2,
-            "name": "Install the Home Assistant Add-on",
-            "text": "Add the HARelay repository (https://github.com/harelay/ha-addon) to Home Assistant's Add-on Store and install the HARelay add-on. Start the add-on and it will automatically enter pairing mode."
+            "name": "Install the Home Assistant App (formerly Add-on)",
+            "text": "Add the HARelay repository (https://github.com/harelay/ha-app) to Home Assistant's App Store and install the HARelay app. Start the app and it will automatically enter pairing mode."
         },
         {
             "@@type": "HowToStep",
             "position": 3,
             "name": "Enter the Pairing Code",
-            "text": "The add-on displays a simple pairing code. Copy the code and enter it on HARelay. Your Home Assistant is now connected and accessible from anywhere!"
+            "text": "The app displays a simple pairing code. Copy the code and enter it on HARelay. Your Home Assistant is now connected and accessible from anywhere!"
         }
     ]
 }

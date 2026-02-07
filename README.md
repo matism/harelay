@@ -4,7 +4,7 @@ Secure remote access proxy for Home Assistant. Access your smart home from anywh
 
 ## Overview
 
-HARelay provides a secure tunnel between your Home Assistant instance and the internet. Users install a lightweight add-on on their Home Assistant, which establishes an outbound WebSocket connection to the HARelay server. This allows remote access without exposing any ports on your home network.
+HARelay provides a secure tunnel between your Home Assistant instance and the internet. Users install a lightweight app (formerly add-on) on their Home Assistant, which establishes an outbound WebSocket connection to the HARelay server. This allows remote access without exposing any ports on your home network.
 
 **Key Features:**
 - No port forwarding required
@@ -14,7 +14,7 @@ HARelay provides a secure tunnel between your Home Assistant instance and the in
 - Session-based authentication
 - Full WebSocket support for real-time Home Assistant features
 - Mobile app access via long-form app subdomain (no login required)
-- Device code pairing for easy add-on setup
+- Device code pairing for easy app setup
 - Two-factor authentication support
 - Data transfer tracking
 
@@ -32,7 +32,7 @@ HARelay provides a secure tunnel between your Home Assistant instance and the in
         │                                        │ WebSocket tunnel
         │                                        │ (MessagePack binary)
         │                             ┌──────────────────────────────────┐
-        └────────────────────────────►│      Home Assistant Add-on       │
+        └────────────────────────────►│       Home Assistant App          │
                                       │  - Connects via WebSocket        │
                                       │  - Proxies HTTP requests         │
                                       │  - Proxies WebSocket streams     │
@@ -48,9 +48,9 @@ HARelay provides a secure tunnel between your Home Assistant instance and the in
 ### How It Works
 
 1. **User Registration**: User creates an account on HARelay
-2. **Add-on Installation**: User installs the HARelay add-on on Home Assistant
-3. **Device Pairing**: Add-on displays a pairing code (XXXX-XXXX), user enters it at harelay.com/link to link their account
-4. **Tunnel Establishment**: The add-on connects to HARelay via WebSocket (outbound connection, no ports needed)
+2. **App Installation**: User installs the HARelay app on Home Assistant
+3. **Device Pairing**: App displays a pairing code (XXXX-XXXX), user enters it at harelay.com/link to link their account
+4. **Tunnel Establishment**: The app connects to HARelay via WebSocket (outbound connection, no ports needed)
 5. **Remote Access**: User visits their subdomain, authenticates, and requests are proxied through the tunnel to Home Assistant
 
 The dashboard auto-refreshes when the connection status changes, showing real-time connection state.
@@ -173,7 +173,7 @@ See `DEPLOYMENT.md` for comprehensive deployment instructions.
 Three WebSocket paths must be proxied:
 
 ```nginx
-# Add-on connections (port 8081)
+# App connections (port 8081)
 location /tunnel {
     proxy_pass http://127.0.0.1:8081;
     # ... WebSocket headers
@@ -202,7 +202,7 @@ location /wss {
 | `APP_PROXY_PORT` | Port for development (empty for production) | - |
 | `APP_PROXY_SECURE` | Use HTTPS for proxy URLs | `true` |
 | `TUNNEL_HOST` | Tunnel server bind address | `0.0.0.0` |
-| `TUNNEL_PORT` | Tunnel server port (add-on connections) | `8081` |
+| `TUNNEL_PORT` | Tunnel server port (app connections) | `8081` |
 | `WS_PROXY_PORT` | WebSocket proxy port | `8082` |
 | `WS_PROXY_PATH` | WebSocket path for production (e.g., `/wss`) | - |
 | `SESSION_DOMAIN` | Cookie domain (use `.domain.com` for subdomains) | - |
@@ -269,9 +269,9 @@ Unique index on `(ha_connection_id, date)` for efficient upserts. Updated atomic
 
 ## Troubleshooting
 
-### Add-on shows "Disconnected"
+### App shows "Disconnected"
 
-1. Check the add-on logs in Home Assistant
+1. Check the app logs in Home Assistant
 2. Verify the connection token is correct
 3. Ensure Home Assistant has internet access
 4. Check if the tunnel server is running: `systemctl status harelay-tunnel`
@@ -280,7 +280,7 @@ Unique index on `(ha_connection_id, date)` for efficient upserts. Updated atomic
 
 1. Home Assistant may be slow to respond
 2. Check HA logs for errors
-3. Verify the add-on is connected
+3. Verify the app is connected
 4. Check tunnel server logs for errors
 
 ### WebSocket not working
@@ -310,9 +310,9 @@ sudo journalctl -u harelay-queue -f
 redis-cli monitor
 ```
 
-## Home Assistant Add-on
+## Home Assistant App (formerly Add-on)
 
-The HA add-on is maintained in a separate repository. See the [ha-addon](https://github.com/harelay/ha-addon) repository for installation and development instructions.
+The HA app is maintained in a separate repository. See the [ha-app](https://github.com/harelay/ha-app) repository for installation and development instructions.
 
 ### Key Features
 - **MessagePack binary protocol** (40-60% bandwidth reduction vs JSON)
@@ -321,7 +321,7 @@ The HA add-on is maintained in a separate repository. See the [ha-addon](https:/
 - Device code pairing mode
 - LRU cache for static files (100MB)
 - Health check with 60-second timeout
-- Ingress WebSocket support for HA add-ons
+- Ingress WebSocket support for HA apps
 
 ## API Endpoints
 

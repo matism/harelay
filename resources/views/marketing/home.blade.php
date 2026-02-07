@@ -82,7 +82,7 @@
                         Traditional remote access requires you to open ports on your router, exposing your network to the internet. HARelay works differently.
                     </p>
                     <p class="mt-4 text-slate-400">
-                        Our add-on creates an <span class="text-white">outbound</span> connection from your Home Assistant to our servers. Since the connection goes <span class="text-white">out</span> from your network (just like browsing a website), no ports need to be opened. Your router's firewall stays intact.
+                        Our app (formerly add-on) creates an <span class="text-white">outbound</span> connection from your Home Assistant to our servers. Since the connection goes <span class="text-white">out</span> from your network (just like browsing a website), no ports need to be opened. Your router's firewall stays intact.
                     </p>
                 </div>
                 <div class="mt-8 lg:mt-0">
@@ -131,7 +131,7 @@
                     What is HARelay?
                 </h2>
                 <p class="mt-4 text-lg text-slate-400 max-w-2xl mx-auto">
-                    HARelay is a <span class="text-white">web service</span> combined with a <span class="text-white">Home Assistant add-on</span>. The add-on runs on your Home Assistant and creates a secure tunnel. You then access your Home Assistant through your personal HARelay URL from any browser.
+                    HARelay is a <span class="text-white">web service</span> combined with a <span class="text-white">Home Assistant app</span>. The app runs on your Home Assistant and creates a secure tunnel. You then access your Home Assistant through your personal HARelay URL from any browser.
                 </p>
             </div>
 
@@ -158,7 +158,7 @@
                     </div>
                     <h3 class="mt-6 text-xl font-semibold text-white">Instant Setup</h3>
                     <p class="mt-3 text-slate-400">
-                        Install our add-on, enter a simple pairing code, and you're connected. No complex configuration needed.
+                        Install our app, enter a simple pairing code, and you're connected. No complex configuration needed.
                     </p>
                 </div>
 
@@ -207,9 +207,9 @@
                     <div class="w-16 h-16 rounded-full bg-cyan-500/20 flex items-center justify-center mx-auto ring-2 ring-cyan-500/30">
                         <span class="text-2xl font-bold text-cyan-400">2</span>
                     </div>
-                    <h3 class="mt-6 text-xl font-semibold text-white">Install the add-on</h3>
+                    <h3 class="mt-6 text-xl font-semibold text-white">Install the app</h3>
                     <p class="mt-3 text-slate-400">
-                        Add our repository to Home Assistant and install the HARelay add-on.
+                        Add our repository to Home Assistant and install the HARelay app.
                     </p>
                 </div>
 
@@ -220,7 +220,7 @@
                     </div>
                     <h3 class="mt-6 text-xl font-semibold text-white">Enter the pairing code</h3>
                     <p class="mt-3 text-slate-400">
-                        The add-on shows a code. Enter it here and you're connected.
+                        The app shows a code. Enter it here and you're connected.
                     </p>
                 </div>
             </div>

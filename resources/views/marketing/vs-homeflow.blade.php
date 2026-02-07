@@ -259,7 +259,7 @@
                         </svg>
                     </summary>
                     <div class="px-6 pb-5">
-                        <p class="text-slate-400">HARelay is designed to be as simple as possible. Install the add-on from the Home Assistant Add-on Store, enter a pairing code, and you're connected. No configuration files or manual token copying needed.</p>
+                        <p class="text-slate-400">HARelay is designed to be as simple as possible. Install the app (formerly add-on) from the Home Assistant App Store, enter a pairing code, and you're connected. No configuration files or manual token copying needed.</p>
                     </div>
                 </details>
 

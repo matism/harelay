@@ -56,6 +56,6 @@ class DeviceLinkController extends Controller
         ]);
 
         return redirect()->route('dashboard')
-            ->with('success', 'Device linked successfully! Your add-on will connect automatically.');
+            ->with('success', 'Device linked successfully! Your app will connect automatically.');
     }
 }

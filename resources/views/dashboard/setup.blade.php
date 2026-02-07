@@ -22,19 +22,19 @@
                                 </div>
                             </div>
                             <div class="ml-3 sm:ml-5 min-w-0">
-                                <h4 class="text-lg font-medium text-white">Add the HARelay Repository to the Add-on Store</h4>
+                                <h4 class="text-lg font-medium text-white">Add the HARelay Repository to the App Store (formerly Add-on Store)</h4>
                                 <p class="mt-2 text-slate-400">
-                                    In Home Assistant, go to <span class="text-white">Settings</span> &rarr; <span class="text-white">Add-ons</span> &rarr; <span class="text-white">Add-on Store</span>.
+                                    In Home Assistant, go to <span class="text-white">Settings</span> &rarr; <span class="text-white">Apps</span> &rarr; <span class="text-white">Install app</span>.
                                     Click the three dots in the top right and select <span class="text-white">Repositories</span>.
                                 </p>
                                 <div class="mt-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
                                     <p class="text-amber-300 text-xs">
-                                        <strong>Note:</strong> This is <strong>not</strong> HACS. Use the built-in Add-on Store under Settings &rarr; Add-ons.
+                                        <strong>Note:</strong> This is <strong>not</strong> HACS. Use the built-in App Store under Settings &rarr; Apps.
                                     </p>
                                 </div>
                                 <div class="mt-3 flex items-center gap-2 sm:gap-3 bg-white/5 rounded-lg p-3 sm:p-4 ring-1 ring-white/10">
-                                    <code class="text-cyan-400 text-xs sm:text-sm flex-1 min-w-0 break-words" style="word-break: break-word;">https://github.com/harelay/ha-addon</code>
-                                    <button onclick="navigator.clipboard.writeText('https://github.com/harelay/ha-addon')"
+                                    <code class="text-cyan-400 text-xs sm:text-sm flex-1 min-w-0 break-words" style="word-break: break-word;">https://github.com/harelay/ha-app</code>
+                                    <button onclick="navigator.clipboard.writeText('https://github.com/harelay/ha-app')"
                                         class="flex-shrink-0 text-slate-400 hover:text-white transition p-1" title="Copy to clipboard">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -52,9 +52,9 @@
                                 </div>
                             </div>
                             <div class="ml-3 sm:ml-5 min-w-0">
-                                <h4 class="text-lg font-medium text-white">Install the Add-on</h4>
+                                <h4 class="text-lg font-medium text-white">Install the App</h4>
                                 <p class="mt-2 text-slate-400">
-                                    Find <span class="text-white">HARelay Tunnel</span> in the add-on store and click <span class="text-white">Install</span>.
+                                    Find <span class="text-white">HARelay</span> in the app store and click <span class="text-white">Install app</span>.
                                     Wait for the installation to complete.
                                 </p>
                             </div>
@@ -68,9 +68,9 @@
                                 </div>
                             </div>
                             <div class="ml-3 sm:ml-5 min-w-0">
-                                <h4 class="text-lg font-medium text-white">Start the Add-on</h4>
+                                <h4 class="text-lg font-medium text-white">Start the App</h4>
                                 <p class="mt-2 text-slate-400">
-                                    Click <span class="text-white">Start</span> to begin the add-on. No configuration is needed - the add-on will automatically enter pairing mode.
+                                    Click <span class="text-white">Start</span> to begin the app. No configuration is needed - the app will automatically enter pairing mode.
                                 </p>
                                 <p class="mt-2 text-slate-400">
                                     Enable <span class="text-white">Start on boot</span> for automatic reconnection after restarts.
@@ -86,9 +86,9 @@
                                 </div>
                             </div>
                             <div class="ml-3 sm:ml-5 min-w-0">
-                                <h4 class="text-lg font-medium text-white">Open the Add-on Web UI</h4>
+                                <h4 class="text-lg font-medium text-white">Open the App Web UI</h4>
                                 <p class="mt-2 text-slate-400">
-                                    Click <span class="text-white">Open Web UI</span> in the add-on page. You'll see a pairing code displayed.
+                                    Click <span class="text-white">Open Web UI</span> in the app page. You'll see a pairing code displayed.
                                 </p>
                                 <div class="mt-4 bg-slate-800/50 rounded-xl p-4 sm:p-6 ring-1 ring-white/10">
                                     <p class="text-slate-400 text-sm mb-3">Example pairing code:</p>
@@ -109,7 +109,7 @@
                             <div class="ml-3 sm:ml-5 min-w-0">
                                 <h4 class="text-lg font-medium text-white">Enter the Code</h4>
                                 <p class="mt-2 text-slate-400">
-                                    Enter the pairing code shown in your add-on to link your device.
+                                    Enter the pairing code shown in your app to link your device.
                                 </p>
                                 <div class="mt-4">
                                     <a href="{{ route('device.link') }}" target="_blank"
@@ -135,7 +135,7 @@
                             <div class="ml-3 sm:ml-5 min-w-0">
                                 <h4 class="text-lg font-medium text-white">Access Your Home Assistant</h4>
                                 <p class="mt-2 text-slate-400">
-                                    Once paired, your add-on will automatically connect. Access your Home Assistant from anywhere at:
+                                    Once paired, your app will automatically connect. Access your Home Assistant from anywhere at:
                                 </p>
                                 @if($connection)
                                     <div class="mt-4 bg-white/5 rounded-xl p-3 sm:p-4 ring-1 ring-white/10">
@@ -158,15 +158,15 @@
                         <h4 class="text-lg font-medium text-white mb-4">Need Help?</h4>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                             <div class="bg-white/5 rounded-xl p-4 sm:p-5 ring-1 ring-white/10">
-                                <h5 class="text-white font-medium mb-2">Add-on not starting?</h5>
+                                <h5 class="text-white font-medium mb-2">App not starting?</h5>
                                 <p class="text-slate-400 text-sm">
-                                    Check the add-on logs for error messages. Make sure you have an active internet connection.
+                                    Check the app logs for error messages. Make sure you have an active internet connection.
                                 </p>
                             </div>
                             <div class="bg-white/5 rounded-xl p-4 sm:p-5 ring-1 ring-white/10">
                                 <h5 class="text-white font-medium mb-2">Connection issues?</h5>
                                 <p class="text-slate-400 text-sm">
-                                    Try restarting the add-on. If problems persist, delete your connection in Settings and pair again.
+                                    Try restarting the app. If problems persist, delete your connection in Settings and pair again.
                                 </p>
                             </div>
                         </div>

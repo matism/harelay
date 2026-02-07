@@ -146,7 +146,7 @@ HARelay is a free service that provides secure remote access to Home Assistant s
 
 - **No Port Forwarding**: Your Home Assistant stays behind your firewall with no exposed ports
 - **Free Service**: Completely free to use, no subscription required
-- **Easy Setup**: Install add-on, enter pairing code, done in under 5 minutes
+- **Easy Setup**: Install app (formerly add-on), enter pairing code, done in under 5 minutes
 - **Secure**: TLS 1.3 encryption, A+ SSL Labs rating, servers in Germany (GDPR compliant)
 - **No Traffic Logging**: We relay traffic but never log or store it
 - **Works Everywhere**: Works behind CGNAT, strict firewalls, and any network configuration
@@ -154,8 +154,8 @@ HARelay is a free service that provides secure remote access to Home Assistant s
 ## How It Works
 
 1. Create a free account at harelay.com
-2. Install the HARelay add-on from Home Assistant's Add-on Store (repository: https://github.com/harelay/ha-addon)
-3. Enter the pairing code displayed by the add-on
+2. Install the HARelay app from Home Assistant's App Store (repository: https://github.com/harelay/ha-app)
+3. Enter the pairing code displayed by the app
 4. Access your Home Assistant at your-subdomain.harelay.com
 
 ## Technical Details
@@ -164,7 +164,7 @@ HARelay is a free service that provides secure remote access to Home Assistant s
 - **Encryption**: TLS 1.3 with forward secrecy, HSTS enabled
 - **Server Location**: Germany (EU, GDPR compliant)
 - **Latency**: Minimal overhead, real-time features work seamlessly
-- **Compatibility**: Works with all Home Assistant features including dashboards, automations, and add-ons
+- **Compatibility**: Works with all Home Assistant features including dashboards, automations, and apps
 
 ## Comparison with Alternatives
 

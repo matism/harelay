@@ -40,7 +40,7 @@
                                     </svg>
                                 </div>
                                 <h3 class="text-2xl font-bold text-white mb-2">Waiting for Connection</h3>
-                                <p class="text-slate-400 mb-6">Start your Home Assistant add-on to connect</p>
+                                <p class="text-slate-400 mb-6">Start your Home Assistant app (formerly add-on) to connect</p>
                             @endif
 
                             <!-- Connection URL -->
@@ -112,8 +112,8 @@
                                         1
                                     </div>
                                     <div>
-                                        <h4 class="text-white font-medium">Install the HARelay add-on</h4>
-                                        <p class="text-slate-400 text-sm mt-1">Add our repository to Home Assistant's Add-on Store and install the HARelay add-on.</p>
+                                        <h4 class="text-white font-medium">Install the HARelay app</h4>
+                                        <p class="text-slate-400 text-sm mt-1">Add our repository to Home Assistant's App Store and install the HARelay app.</p>
                                     </div>
                                 </div>
                                 <div class="flex items-start bg-white/5 rounded-xl p-4">
@@ -122,7 +122,7 @@
                                     </div>
                                     <div>
                                         <h4 class="text-white font-medium">Get your pairing code</h4>
-                                        <p class="text-slate-400 text-sm mt-1">Start the add-on and open its web UI. You'll see a pairing code like <code class="text-cyan-400 bg-white/10 px-1 rounded">ABCD-1234</code>.</p>
+                                        <p class="text-slate-400 text-sm mt-1">Start the app and open its web UI. You'll see a pairing code like <code class="text-cyan-400 bg-white/10 px-1 rounded">ABCD-1234</code>.</p>
                                     </div>
                                 </div>
                                 <div class="flex items-start bg-white/5 rounded-xl p-4">

@@ -212,8 +212,8 @@
                     <div class="p-6 sm:p-8">
                         <h3 class="text-lg font-semibold text-white mb-1">Relink Device</h3>
                         <p class="text-slate-400 text-sm mb-6">
-                            If you need to reconnect your Home Assistant add-on, you can generate a new pairing code.
-                            This is useful if you've reinstalled the add-on or need to move to a different Home Assistant instance.
+                            If you need to reconnect your Home Assistant app (formerly add-on), you can generate a new pairing code.
+                            This is useful if you've reinstalled the app or need to move to a different Home Assistant instance.
                         </p>
 
                         <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-6">
@@ -223,7 +223,7 @@
                                 </svg>
                                 <div class="ml-3">
                                     <p class="text-sm text-amber-300">
-                                        Relinking will disconnect your current add-on. Make sure you have access to your Home Assistant to complete the pairing.
+                                        Relinking will disconnect your current app. Make sure you have access to your Home Assistant to complete the pairing.
                                     </p>
                                 </div>
                             </div>

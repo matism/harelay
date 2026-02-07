@@ -169,7 +169,7 @@ This transparent approach requires no JavaScript injection - Home Assistant's na
 
 ### Add-on Protocol (MessagePack Binary)
 
-The HA add-on (`../harelay-addon/`) connects via WebSocket to port 8081 using **MessagePack binary protocol** (not JSON).
+The HA add-on (`../harelay-app/`) connects via WebSocket to port 8081 using **MessagePack binary protocol** (not JSON).
 
 **Why MessagePack:**
 - **40-60% bandwidth reduction** vs JSON+base64
@@ -250,7 +250,7 @@ php artisan tunnel:create-test
 composer dev
 
 # 3. Configure the HA add-on with subdomain and token
-# See ../harelay-addon/ for add-on setup
+# See ../harelay-app/ for add-on setup
 
 # 4. Add to /etc/hosts (for local subdomain routing):
 #    127.0.0.1 {subdomain}.harelay.test
@@ -276,7 +276,7 @@ Valet automatically handles wildcard subdomains: `https://{subdomain}.harelay.te
 
 ### HA Add-on
 
-The Home Assistant add-on is in a separate repository at `../harelay-addon/` (current version: 1.4.2). It's a Python asyncio WebSocket client that:
+The Home Assistant add-on is in a separate repository at `../harelay-app/` (current version: 1.4.2). It's a Python asyncio WebSocket client that:
 - Connects to the tunnel server on port 8081
 - Authenticates with subdomain and token
 - Proxies HTTP requests to local Home Assistant
@@ -932,7 +932,7 @@ resources/views/
 - **Format code**: Run `./vendor/bin/pint` before committing
 - **Check nginx config**: When debugging WebSocket issues, verify nginx forwards required headers
 - **Test both subdomain types**: When changing proxy/WebSocket code, test both regular and app subdomains
-- **Check add-on version**: The add-on at `../harelay-addon/` should be kept in sync with server changes
+- **Check add-on version**: The add-on at `../harelay-app/` should be kept in sync with server changes
 - **Don't use blocking Redis**: Always use polling, not BLPOP/BRPOP
 - **Preserve IP consistency**: Always forward X-Forwarded-For for HA auth flows
 - **MessagePack binary protocol**: All tunnel communication uses MessagePack, not JSON. Bodies are raw bytes, not base64.

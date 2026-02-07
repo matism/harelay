@@ -16,7 +16,7 @@
             "name": "What happens if HARelay gets hacked?",
             "acceptedAnswer": {
                 "@@type": "Answer",
-                "text": "In that unlikely scenario: We don't store traffic logs, so there's no historical data to steal. Your HA login credentials are never stored by HARelay - they go directly to your Home Assistant. Your home network has no open ports, so there's no direct path in. You can immediately disconnect by stopping the add-on."
+                "text": "In that unlikely scenario: We don't store traffic logs, so there's no historical data to steal. Your HA login credentials are never stored by HARelay - they go directly to your Home Assistant. Your home network has no open ports, so there's no direct path in. You can immediately disconnect by stopping the app (formerly add-on)."
             }
         },
         {
@@ -32,7 +32,7 @@
             "name": "What if I want to disconnect immediately?",
             "acceptedAnswer": {
                 "@@type": "Answer",
-                "text": "Simply stop the HARelay add-on in Home Assistant. The tunnel closes instantly and no one can access your HA through HARelay until you start it again. You can also regenerate your connection token to invalidate any existing credentials."
+                "text": "Simply stop the HARelay app in Home Assistant. The tunnel closes instantly and no one can access your HA through HARelay until you start it again. You can also regenerate your connection token to invalidate any existing credentials."
             }
         },
         {

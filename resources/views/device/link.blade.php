@@ -1,7 +1,7 @@
 <x-guest-layout>
     <div class="text-center mb-6">
         <h2 class="text-xl font-semibold text-white mb-2">Link Your Device</h2>
-        <p class="text-slate-400 text-sm">Enter the pairing code shown in your Home Assistant add-on</p>
+        <p class="text-slate-400 text-sm">Enter the pairing code shown in your Home Assistant app (formerly add-on)</p>
     </div>
 
     @if (session('status'))

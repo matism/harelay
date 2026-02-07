@@ -118,7 +118,7 @@
                     </div>
                     <h3 class="text-xl font-semibold text-white mb-3">You're in Control</h3>
                     <p class="text-slate-400">
-                        Disconnect anytime by simply stopping the add-on. Regenerate your connection token if you suspect it's compromised. Delete your account and all data is permanently removed.
+                        Disconnect anytime by simply stopping the app (formerly add-on). Regenerate your connection token if you suspect it's compromised. Delete your account and all data is permanently removed.
                     </p>
                 </div>
 
@@ -427,7 +427,7 @@
                 <div class="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-6">
                     <h3 class="text-lg font-semibold text-white">What happens if HARelay gets hacked?</h3>
                     <p class="mt-3 text-slate-400">
-                        In that unlikely scenario: We don't store traffic logs, so there's no historical data to steal. Your HA login credentials are never stored by HARelay - they go directly to your Home Assistant. Your home network has no open ports, so there's no direct path in. You can immediately disconnect by stopping the add-on.
+                        In that unlikely scenario: We don't store traffic logs, so there's no historical data to steal. Your HA login credentials are never stored by HARelay - they go directly to your Home Assistant. Your home network has no open ports, so there's no direct path in. You can immediately disconnect by stopping the app.
                     </p>
                 </div>
 
@@ -441,7 +441,7 @@
                 <div class="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-6">
                     <h3 class="text-lg font-semibold text-white">What if I want to disconnect immediately?</h3>
                     <p class="mt-3 text-slate-400">
-                        Simply stop the HARelay add-on in Home Assistant. The tunnel closes instantly and no one can access your HA through HARelay until you start it again. You can also regenerate your connection token to invalidate any existing credentials.
+                        Simply stop the HARelay app in Home Assistant. The tunnel closes instantly and no one can access your HA through HARelay until you start it again. You can also regenerate your connection token to invalidate any existing credentials.
                     </p>
                 </div>
 

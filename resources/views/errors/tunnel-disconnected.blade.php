@@ -40,13 +40,13 @@
                     </h2>
 
                     <p class="mt-4 text-gray-600">
-                        The Home Assistant add-on is not currently connected. Please check that:
+                        The Home Assistant app (formerly add-on) is not currently connected. Please check that:
                     </p>
 
                     <ul class="mt-4 text-left text-gray-600 space-y-2">
                         <li class="flex items-start">
                             <span class="flex-shrink-0 h-5 w-5 text-gray-400 mr-2">1.</span>
-                            The HARelay add-on is installed and running
+                            The HARelay app is installed and running
                         </li>
                         <li class="flex items-start">
                             <span class="flex-shrink-0 h-5 w-5 text-gray-400 mr-2">2.</span>

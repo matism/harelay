@@ -66,14 +66,14 @@
                             <span class="text-2xl font-bold text-cyan-400">2</span>
                         </div>
                         <h3 class="mt-6 text-2xl font-bold text-white">
-                            Install the Home Assistant Add-on
+                            Install the Home Assistant App (formerly Add-on)
                         </h3>
                         <p class="mt-4 text-lg text-slate-400">
-                            Add our repository to Home Assistant's built-in <span class="text-white">Add-on Store</span> (not HACS) and install the HARelay add-on. Start the add-on and it will automatically enter pairing mode.
+                            Add our repository to Home Assistant's built-in <span class="text-white">App Store</span> (not HACS) and install the HARelay app. Start the app and it will automatically enter pairing mode.
                         </p>
                         <div class="mt-4 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
                             <p class="text-amber-300 text-sm">
-                                <strong>Where to find the Add-on Store:</strong> Settings &rarr; Add-ons &rarr; Add-on Store &rarr; Three dots menu &rarr; Repositories
+                                <strong>Where to find the App Store:</strong> Settings &rarr; Apps &rarr; Install app &rarr; Three dots menu &rarr; Repositories
                             </p>
                         </div>
                         <div class="mt-6">
@@ -101,11 +101,11 @@
                     </div>
                     <div class="mt-10 lg:mt-0 lg:order-1">
                         <div class="bg-slate-800 rounded-2xl shadow-xl p-4 sm:p-6 font-mono text-sm">
-                            <div class="text-slate-500 mb-4"># Add to Home Assistant Add-on Store (not HACS)</div>
+                            <div class="text-slate-500 mb-4"># Add to Home Assistant App Store (not HACS)</div>
                             <div class="space-y-2">
-                                <div class="text-cyan-400 break-all">https://github.com/harelay/ha-addon</div>
+                                <div class="text-cyan-400 break-all">https://github.com/harelay/ha-app</div>
                                 <div class="mt-6 text-slate-500"># That's all you need to add!</div>
-                                <div class="text-slate-500"># No configuration required - just start the add-on</div>
+                                <div class="text-slate-500"># No configuration required - just start the app</div>
                             </div>
                         </div>
                     </div>
@@ -121,7 +121,7 @@
                             Enter the Pairing Code
                         </h3>
                         <p class="mt-4 text-lg text-slate-400">
-                            The add-on displays a simple pairing code. Open the add-on's web interface, copy the code, and enter it on HARelay. Your Home Assistant is now connected and accessible from anywhere!
+                            The app displays a simple pairing code. Open the app's web interface, copy the code, and enter it on HARelay. Your Home Assistant is now connected and accessible from anywhere!
                         </p>
                         <div class="mt-6 bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4">
                             <p class="text-cyan-300">
