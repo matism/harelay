@@ -502,6 +502,11 @@ sudo journalctl -u harelay-tunnel -f
 
 ## Common Pitfalls (READ BEFORE MAKING CHANGES)
 
+### Connection Replacement in Workerman
+- **`onClose` fires asynchronously** - Workerman's `close()` may defer `onClose` until the send buffer drains. Never store new state before `close()` completes, or guard `onClose` against acting on replaced connections.
+- **Always check identity in `onClose`** - Use `$addonConnections[$subdomain] === $conn` to ensure the closing connection is still the active one. A new connection may have already replaced it.
+- **Clean up before `close()`** - When replacing a connection, remove the old entry from shared state maps (`$addonConnections`, `$browserWsConnections`, `$addonWsStreams`) *before* calling `$oldConn->close()`.
+
 ### Redis in Workerman
 - **Pending requests use Redis Hash** - `TunnelManager` uses atomic HSET/HDEL/HGETALL operations to prevent race conditions when multiple requests arrive simultaneously
 - **Hash key format** - `harelay:tunnel:pending:{subdomain}` with each request as a field (request ID → serialized data)
@@ -813,6 +818,25 @@ If subdomain change doesn't propagate:
 - **Fix:**
   1. Add-on: Set `auto_decompress=False` on aiohttp ClientSession
   2. Server: Preserve `Content-Encoding` header (don't strip it in ProxyController)
+
+#### Connection Replacement Race Condition (Tunnel Dies After 1-2 Days)
+- **Symptom:** After 1-2 days, the tunnel connection drops. The add-on reconnects successfully (logs show "Connected"), but HA is inaccessible — WebSocket streams close after 1 message, HTTP requests hang. Only restarting the add-on fixes it.
+- **Root cause:** A race condition in `tunnel-server.php` when the add-on reconnects while the server still holds the old (dead) connection.
+
+  **How it happens:** When the network drops, the add-on detects it within ~30s (websockets library ping timeout) and reconnects immediately. But the server's stale detection takes up to 90s (30s timer + 60s threshold). So the add-on sends `auth` while the old connection is still registered. The auth handler called `$oldConn->close()` and then stored the new connection:
+  ```php
+  $addonConnections[$subdomain]->close();        // Triggers onClose LATER
+  $addonConnections[$subdomain] = $newConn;      // Store new connection
+  // ... then Workerman fires onClose for old connection:
+  unset($addonConnections[$subdomain]);           // WIPES THE NEW CONNECTION!
+  ```
+  Workerman's `onClose` fires asynchronously (after the send buffer drains), so it ran *after* the new connection was stored — deleting `$addonConnections`, `$browserWsConnections`, and `$addonWsStreams` for the subdomain. The tunnel server lost all knowledge of the active connection.
+
+  **Why restarting fixed it:** A full add-on restart takes several seconds. By then, the server's 90s stale timeout fires first, cleaning up the old connection properly. The add-on reconnects to a clean state — no race condition.
+
+- **Fix:** Two changes in `tunnel-server.php`:
+  1. **Auth handler:** Clean up old connection's state (browser WS connections, stream mappings) *before* calling `close()`, so cleanup doesn't depend on `onClose` timing.
+  2. **`onClose` handler:** Guard with `$addonConnections[$subdomain] === $conn` — only clean up if the closing connection is still the active one. If it's been replaced, the auth handler already handled cleanup.
 
 ## Known Limitations
 

@@ -256,7 +256,8 @@
                             &copy; {{ date('Y') }} HARelay. All rights reserved.
                         </p>
                         <p class="text-slate-500 text-sm mt-4 md:mt-0">
-                            Made with &hearts; by Mathias Placho
+                            Sponsored by <a href="https://www.userbrain.com/en/" target="_blank" rel="noopener noreferrer" class="underline hover:text-white transition-colors">Userbrain</a>
+                            | Made with &hearts; by <a href="https://www.linkedin.com/in/mathiasplacho" target="_blank" rel="noopener noreferrer" class="underline hover:text-white transition-colors">Mathias Placho</a>
                         </p>
                     </div>
                     <p class="text-slate-600 text-xs text-center mt-6">
