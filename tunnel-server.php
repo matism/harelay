@@ -775,9 +775,24 @@ $tunnelWorker->onMessage = function (TcpConnection $conn, $data) use (&$addonCon
         }
 
         // Disconnect existing connection for this subdomain
+        // Clean up state BEFORE closing to prevent race condition:
+        // close() can trigger onClose asynchronously (after send buffer drains),
+        // which would wipe out the new connection's state if we don't clean up first.
         if (isset($addonConnections[$subdomain])) {
             tunnelLog("Add-on: replacing existing connection for {$subdomain}");
-            $addonConnections[$subdomain]->close();
+            $oldConn = $addonConnections[$subdomain];
+            unset($addonConnections[$subdomain]);
+
+            // Close browser WS connections tied to old add-on connection
+            if (isset($browserWsConnections[$subdomain])) {
+                foreach ($browserWsConnections[$subdomain] as $browserConn) {
+                    $browserConn->close();
+                }
+                unset($browserWsConnections[$subdomain]);
+            }
+            unset($addonWsStreams[$subdomain]);
+
+            $oldConn->close();
         }
 
         $conn->authenticated = true;
@@ -931,19 +946,29 @@ $tunnelWorker->onClose = function (TcpConnection $conn) use (&$addonConnections,
     }
 
     tunnelLog("Add-on: disconnected {$conn->subdomain}");
-    unset($addonConnections[$conn->subdomain]);
 
-    // Close all browser WebSocket connections for this subdomain
-    if (isset($browserWsConnections[$conn->subdomain])) {
-        foreach ($browserWsConnections[$conn->subdomain] as $browserConn) {
-            $browserConn->close();
+    // Only clean up if THIS connection is still the active one.
+    // When a new add-on connection replaces the old one, the auth handler
+    // cleans up state and stores the new connection before close() triggers
+    // this callback. Without this guard, the delayed onClose from the old
+    // connection would wipe out the new connection's state.
+    if (isset($addonConnections[$conn->subdomain]) && $addonConnections[$conn->subdomain] === $conn) {
+        unset($addonConnections[$conn->subdomain]);
+
+        // Close all browser WebSocket connections for this subdomain
+        if (isset($browserWsConnections[$conn->subdomain])) {
+            foreach ($browserWsConnections[$conn->subdomain] as $browserConn) {
+                $browserConn->close();
+            }
+            unset($browserWsConnections[$conn->subdomain]);
         }
-        unset($browserWsConnections[$conn->subdomain]);
-    }
-    unset($addonWsStreams[$conn->subdomain]);
+        unset($addonWsStreams[$conn->subdomain]);
 
-    HaConnection::where('subdomain', $conn->subdomain)
-        ->update(['status' => 'disconnected']);
+        HaConnection::where('subdomain', $conn->subdomain)
+            ->update(['status' => 'disconnected']);
+    } else {
+        tunnelLog("Add-on: ignoring cleanup for replaced connection {$conn->subdomain}");
+    }
 };
 
 $tunnelWorker->onWorkerStop = function () {
